@@ -32,10 +32,9 @@ keypair.
   and S3 secrets stable across restarts.
 - `RELAY_OWNER_PUBKEY` is intentionally not prefixed with `BUZZ_`; it must be a
   64-character hex Nostr pubkey when closed relay mode is enabled.
-- `BUZZ_AUTO_MIGRATE` is opt-in. Set `BUZZ_AUTO_MIGRATE=true` or run
-  `buzz-admin migrate` before starting the relay when bootstrapping a fresh
-  database. Auto-migration requires an image that includes embedded SQLx
-  migrations.
+- Compose runs the TypeScript `buzz-admin migrate` job before the relay on
+  every start. Migrations are idempotent and protected by a PostgreSQL advisory
+  lock.
 - The stack uses Postgres, Redis, MinIO, and a git data volume because
   those are real Buzz dependencies today. Minimal mode can simplify this later.
 

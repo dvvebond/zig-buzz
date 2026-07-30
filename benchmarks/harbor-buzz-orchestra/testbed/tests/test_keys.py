@@ -12,12 +12,12 @@ from harbor_buzz_testbed.keys import (
     generate_keypair,
 )
 
-# Produced by the Rust reference implementation
-# (crates/buzz-sdk/examples/compute_auth_tag.rs) for owner secret 0x...03 and
+# Produced by the TypeScript SDK reference implementation for owner secret
+# 0x...03 and
 # agent pubkey "a" * 64. Pins the preimage format across implementations.
-RUST_OWNER_SECRET = "0" * 63 + "3"
-RUST_AGENT_PUBKEY = "a" * 64
-RUST_TAG = [
+REFERENCE_OWNER_SECRET = "0" * 63 + "3"
+REFERENCE_AGENT_PUBKEY = "a" * 64
+REFERENCE_TAG = [
     "auth",
     "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
     "",
@@ -43,24 +43,27 @@ def test_generate_keypair_is_fresh_and_hex():
 
 
 def test_auth_tag_shape_and_owner_pubkey():
-    tag = json.loads(compute_auth_tag(RUST_OWNER_SECRET, RUST_AGENT_PUBKEY))
+    tag = json.loads(
+        compute_auth_tag(REFERENCE_OWNER_SECRET, REFERENCE_AGENT_PUBKEY)
+    )
     assert tag[0] == "auth"
-    assert tag[1] == RUST_TAG[1]  # same owner pubkey as the Rust implementation
+    assert tag[1] == REFERENCE_TAG[1]
     assert tag[2] == ""
 
 
 def test_auth_tag_signature_verifies_over_nip_oa_preimage():
     agent = generate_keypair()
-    tag = json.loads(compute_auth_tag(RUST_OWNER_SECRET, agent.pubkey))
+    tag = json.loads(compute_auth_tag(REFERENCE_OWNER_SECRET, agent.pubkey))
     owner_pubkey = coincurve.PublicKeyXOnly(bytes.fromhex(tag[1]))
     assert owner_pubkey.verify(bytes.fromhex(tag[3]), preimage_digest(agent.pubkey, ""))
 
 
-def test_rust_reference_tag_verifies_under_python_preimage():
-    """The Rust-signed vector must verify against our preimage construction."""
-    owner_pubkey = coincurve.PublicKeyXOnly(bytes.fromhex(RUST_TAG[1]))
+def test_reference_tag_verifies_under_python_preimage():
+    """The signed reference vector must verify against our preimage construction."""
+    owner_pubkey = coincurve.PublicKeyXOnly(bytes.fromhex(REFERENCE_TAG[1]))
     assert owner_pubkey.verify(
-        bytes.fromhex(RUST_TAG[3]), preimage_digest(RUST_AGENT_PUBKEY, "")
+        bytes.fromhex(REFERENCE_TAG[3]),
+        preimage_digest(REFERENCE_AGENT_PUBKEY, ""),
     )
 
 

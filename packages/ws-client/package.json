@@ -1,0 +1,25 @@
+{
+  "name": "@buzz/ws-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*"
+  },
+  "devDependencies": {
+    "nostr-tools": "^2.23.3",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

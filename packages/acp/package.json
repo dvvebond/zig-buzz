@@ -1,0 +1,36 @@
+{
+  "name": "@buzz/acp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-acp": "./dist/main.js",
+    "buzz-acp-ts": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cli": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && pnpm --filter @buzz/ws-client build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && pnpm --filter @buzz/ws-client build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.3.0",
+    "@buzz/core": "workspace:*",
+    "@buzz/ws-client": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1",
+    "@types/ws": "^8.18.1"
+  }
+}

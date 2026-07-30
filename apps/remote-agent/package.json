@@ -1,0 +1,36 @@
+{
+  "name": "@buzz/remote-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-remote-agent": "./dist/main.js"
+  },
+  "exports": {
+    "./connection": {
+      "types": "./dist/relay-connection.d.ts",
+      "import": "./dist/relay-connection.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/core build && pnpm --filter @buzz/remote-agent-protocol build && tsc -p tsconfig.json --noEmit && vitest run",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/acp": "workspace:*",
+    "@buzz/agent": "workspace:*",
+    "@buzz/core": "workspace:*",
+    "@buzz/remote-agent-protocol": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

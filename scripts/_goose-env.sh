@@ -4,13 +4,16 @@
 # Sets: env_args (bash array), ready for: exec env "${env_args[@]}" <binary>
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _relay="$1"
 _key="$2"
 _agents="$3"
 _heartbeat="$4"
 _prompt="${5:-}"
 
-cargo build --release -p buzz-acp -p buzz-cli
+pnpm --filter @buzz/acp build
+pnpm --filter @buzz/cli build
+export PATH="${REPO_ROOT}/node_modules/.bin:${PATH}"
 
 env_args=(
     BUZZ_RELAY_URL="$_relay"

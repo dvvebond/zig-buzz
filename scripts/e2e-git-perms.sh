@@ -6,9 +6,7 @@
 #
 # Prerequisites:
 #   - Docker services running (postgres, redis, minio)
-#   - Relay built: cargo build --release --bin buzz-relay
-#   - Credential helper built: cargo build --release --bin git-credential-nostr
-#   - Signing program built: cargo build --release --bin git-sign-nostr
+#   - TypeScript workspace installed (`pnpm install`)
 #   - Python 3 with websocket-client: pip install websocket-client
 #
 # What it tests:
@@ -89,12 +87,12 @@ trap cleanup EXIT
 check_deps() {
     local missing=()
 
-    if [[ ! -x "${REPO_ROOT}/target/release/buzz-relay" ]]; then
-        missing+=("buzz-relay (cargo build --release --bin buzz-relay)")
-    fi
-    if [[ ! -x "${REPO_ROOT}/target/release/git-credential-nostr" ]]; then
-        missing+=("git-credential-nostr (cargo build --release --bin git-credential-nostr)")
-    fi
+    pnpm --filter @buzz/relay build
+    pnpm --filter @buzz/git-credential-nostr build
+    pnpm --filter @buzz/git-sign-nostr build
+    chmod 755 \
+        "${REPO_ROOT}/packages/git-credential-nostr/dist/main.js" \
+        "${REPO_ROOT}/packages/git-sign-nostr/dist/main.js"
     if ! command -v python3 &>/dev/null; then
         missing+=("python3")
     fi
@@ -159,7 +157,7 @@ print(format(pub[0], '064x'))
 
 # ── Git clone/push helpers ────────────────────────────────────────────────────
 
-CRED_HELPER="${REPO_ROOT}/target/release/git-credential-nostr"
+CRED_HELPER="${REPO_ROOT}/packages/git-credential-nostr/dist/main.js"
 
 # Clone a repo with nostr credential helper configured.
 # Usage: git_clone <privkey> <repo_url> <dest_dir>
@@ -333,16 +331,16 @@ fi
 
 export BUZZ_GIT_REPO_PATH="${REPO_ROOT}/repos"
 export BUZZ_GIT_HOOK_HMAC_SECRET="${HMAC_SECRET}"
-export BUZZ_BIND_ADDR="${RELAY_HOST}:${RELAY_PORT}"
-export RELAY_URL="${RELAY_WS}"
-export RUST_LOG="buzz_relay=warn"
+export BUZZ_HOST="${RELAY_HOST}"
+export BUZZ_PORT="${RELAY_PORT}"
+export BUZZ_PUBLIC_URL="${RELAY_WS}/"
 export BUZZ_REQUIRE_AUTH_TOKEN=false
 
 # Clean repos dir (isolated test state)
 rm -rf "${REPO_ROOT}/repos"
 mkdir -p "${REPO_ROOT}/repos"
 
-./target/release/buzz-relay > /tmp/buzz-relay-e2e.log 2>&1 &
+node apps/relay/dist/main.js > /tmp/buzz-relay-e2e.log 2>&1 &
 RELAY_PID=$!
 
 # Wait for relay to be ready (poll, not sleep)
@@ -570,11 +568,11 @@ success "=== PHASE 1 COMPLETE: Transport + RBAC ==="
 # PHASE 2 — Commit Signing (NIP-GS)
 # =============================================================================
 
-SIGNER="${REPO_ROOT}/target/release/git-sign-nostr"
+SIGNER="${REPO_ROOT}/packages/git-sign-nostr/dist/main.js"
 
-if [[ ! -x "$SIGNER" ]]; then
+if [[ ! -f "${REPO_ROOT}/packages/git-sign-nostr/dist/main.js" ]]; then
     warn "git-sign-nostr not built — skipping signing tests"
-    warn "Build with: cargo build --release --bin git-sign-nostr"
+    warn "Build with: pnpm --filter @buzz/git-sign-nostr build"
 else
 
 # ── Test: Unsigned commit pushes fine (advisory model) ────────────────────────

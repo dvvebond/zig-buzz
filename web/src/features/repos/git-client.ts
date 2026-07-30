@@ -41,7 +41,7 @@ function repoGitUrl(owner: string, repoName: string): string {
 }
 
 /**
- * The NIP-98 `u` tag URL — must match what transport.rs expects after
+ * The NIP-98 `u` tag URL — must match the relay Git transport after
  * stripping `/info/refs`, `/git-upload-pack`, `/git-receive-pack`.
  * That means the full path including `.git`.
  */

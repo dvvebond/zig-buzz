@@ -8,9 +8,9 @@
     <!--
       Boot background: the document must be painted before the app bundle (and
       its stylesheets) load so cold boot never flashes ahead of the loading
-      gate. The window itself is also painted pre-document via `backgroundColor`
-      in tauri.conf.json. The body paints its own themed background once the app
-      CSS loads, so this never shows through after boot.
+      gate. The TypeScript desktop host serves this document locally. The body
+      paints its own themed background once the app CSS loads, so this never
+      shows through after boot.
 
       The inline script below reads the cached theme background (same
       `buzz-theme-cache` entry ThemeProvider writes) and applies it synchronously

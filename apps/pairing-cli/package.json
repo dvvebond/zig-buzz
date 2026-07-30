@@ -1,0 +1,34 @@
+{
+  "name": "@buzz/pairing-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-pair": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/flow.d.ts",
+      "import": "./dist/flow.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/pairing build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/pairing build && pnpm --filter @buzz/pair-relay build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*",
+    "@buzz/pairing": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@buzz/pair-relay": "workspace:*",
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

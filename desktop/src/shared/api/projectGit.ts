@@ -502,9 +502,15 @@ export class ProjectPullRequestMergeError extends Error {
 
 function mergeErrorPayload(error: unknown): unknown {
   const payload = error instanceof TauriInvokeError ? error.payload : error;
-  if (typeof payload !== "string") return payload;
+  const encoded =
+    typeof payload === "string"
+      ? payload
+      : payload instanceof Error
+        ? payload.message
+        : null;
+  if (encoded === null) return payload;
   try {
-    return JSON.parse(payload);
+    return JSON.parse(encoded);
   } catch {
     return null;
   }

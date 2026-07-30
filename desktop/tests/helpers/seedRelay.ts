@@ -25,7 +25,7 @@ import { TEST_IDENTITIES } from "./bridge";
 // (setup-desktop-test-data.sh seeds tyler/alice/bob/charlie into `general`),
 // which `enforce_relay_membership` requires.
 //
-// Canonical tag shapes (crates/buzz-sdk/src/builders.rs thread_tags + ingest):
+// Canonical tag shapes (packages/sdk/src/builders.ts thread tags + ingest):
 //   top-level : ["h", channelId]                       — no e-tag → depth NULL
 //   direct    : ["e", parentId, "", "reply"]           — reply alone; root=parent
 //   nested    : ["e", rootId, "", "root"],

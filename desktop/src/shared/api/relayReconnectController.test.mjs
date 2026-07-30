@@ -59,20 +59,20 @@ function makeDeps({
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 
-test("fast path outlives the native websocket connection timeout", () => {
-  const rustSource = readFileSync(
-    path.resolve(testDir, "../../../src-tauri/src/native_websocket.rs"),
+test("fast path outlives the desktop websocket connection timeout", () => {
+  const transportSource = readFileSync(
+    path.resolve(testDir, "../../native/tauriShim.ts"),
     "utf8",
   );
-  const match = rustSource.match(
-    /const CONNECT_TIMEOUT: Duration = Duration::from_secs\((\d+)\);/,
+  const match = transportSource.match(
+    /const WEBSOCKET_CONNECT_TIMEOUT_MS = ([\d_]+);/,
   );
-  assert.ok(match, "native websocket connect timeout is declared in seconds");
+  assert.ok(match, "desktop websocket connect timeout is declared");
 
-  const nativeConnectTimeoutMs = Number(match[1]) * 1_000;
+  const desktopConnectTimeoutMs = Number(match[1].replaceAll("_", ""));
   assert.ok(
-    DEFAULT_RECONNECT_TIMING_POLICY.fastPathTimeoutMs > nativeConnectTimeoutMs,
-    "fast path must wait for the native websocket attempt to settle",
+    DEFAULT_RECONNECT_TIMING_POLICY.fastPathTimeoutMs > desktopConnectTimeoutMs,
+    "fast path must wait for the desktop websocket attempt to settle",
   );
 });
 

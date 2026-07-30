@@ -13,7 +13,7 @@
 -- from the connection host by the server, never supplied by the client, and
 -- every scoped row carries that immutable `community_id`.
 --
--- Migration-lint obligations enforced by the Lane 0 lint harness:
+-- Migration-lint obligations enforced by the TypeScript schema tests:
 --   1. Every tenant-scoped table has `community_id NOT NULL`.
 --   2. No UNIQUE / PRIMARY KEY / FK on a scoped table is observable across
 --      communities: each leads with `community_id` (or, for child rows whose
@@ -204,21 +204,20 @@ CREATE TABLE events (
     -- GIN index itself stays the minimal `GIN (search_tsv)` (Max's caveat:
     -- avoid btree_gin unless EXPLAIN proves it buys something).
     --
-    -- Privacy kind exclusions (parity with the pre-rewrite Typesense feed —
-    -- old relay's `handlers/event.rs:287-290` skip set):
+    -- Privacy kind exclusions (parity with the pre-rewrite Typesense feed and
+    -- the TypeScript relay's search visibility policy):
     --   1059   = KIND_GIFT_WRAP        (NIP-17 ciphertext)
     --   30300  = KIND_EVENT_REMINDER   (AUTHOR_ONLY_KINDS — defense in depth)
     --   30622  = KIND_DM_VISIBILITY    (per-viewer private hide state)
     --   44100  = KIND_MEMBER_ADDED_NOTIFICATION  (p-gated membership notice)
     --   44101  = KIND_MEMBER_REMOVED_NOTIFICATION (p-gated membership notice)
     -- NULL tsvector never matches `@@`, so excluded rows are storage-level
-    -- unsearchable. Constants kept in `buzz_core::kind` (KIND_GIFT_WRAP,
+    -- unsearchable. Constants kept in `packages/core/src/kinds.ts` (KIND_GIFT_WRAP,
     -- KIND_EVENT_REMINDER, KIND_DM_VISIBILITY,
     -- KIND_MEMBER_ADDED_NOTIFICATION, KIND_MEMBER_REMOVED_NOTIFICATION); inlined
-    -- here because a sqlx
-    -- migration is frozen SQL and cannot import the Rust constant. If a new
+    -- here because a frozen migration cannot import a runtime constant. If a new
     -- privacy-sensitive kind is added there, update this list and add a
-    -- regression test in `buzz-search/tests/fts_integration.rs`.
+    -- regression test in the TypeScript search suite.
     search_tsv  TSVECTOR GENERATED ALWAYS AS (
         CASE WHEN kind IN (1059, 30300, 30622, 44100, 44101) THEN NULL::tsvector
              ELSE to_tsvector('simple', content)
@@ -281,7 +280,7 @@ CREATE INDEX idx_events_search_tsv ON events USING GIN (search_tsv);
 -- Conformance: "Channel-less global events and DMs" (#p fan-out). The join to
 -- events MUST carry the community tuple (e.community_id = m.community_id AND
 -- e.id = m.event_id) — bare e.id = m.event_id would leak cross-community
--- mentions (Max, verified at event.rs:222).
+-- mentions (verified by the TypeScript relay query coverage).
 
 CREATE TABLE event_mentions (
     community_id        UUID NOT NULL REFERENCES communities(id),

@@ -14,7 +14,7 @@ all entries as endpoint configs (no comment keys).
 M1 wiring proof: both placeholder endpoints resolve to one local llama-server
 (OpenAI-compatible, `http://127.0.0.1:8091/v1`, no cloud keys).
 
-buzz-agent env contract (crates/buzz-agent/src/config.rs, pinned at the M1
+buzz-agent env contract (`packages/agent`, pinned at the M1
 binary SHA): `provider=openai` reads `OPENAI_COMPAT_API_KEY` +
 `OPENAI_COMPAT_BASE_URL`; the runtime sets `BUZZ_AGENT_MODEL` from the
 manifest endpoint name, which overrides `OPENAI_COMPAT_MODEL` — llama-server

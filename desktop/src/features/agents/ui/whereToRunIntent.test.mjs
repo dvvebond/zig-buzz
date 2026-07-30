@@ -59,3 +59,39 @@ test("provider draft resolves with coerced config values", () => {
     config: { region: "us", size: 3 },
   });
 });
+
+test("remote server blocks submit until its secure session is ready", () => {
+  const draft = {
+    ...emptyWhereToRunDraft,
+    runOn: "remote-server",
+    remote: {
+      enrollmentId: "c15e3cf6-d2ea-4b27-8e9e-2d2a0df4a92b",
+      expiresAt: 1_785_250_600,
+      ready: false,
+      setupCommand: "buzz-remote-agent ...",
+      workerPubkey: "a".repeat(64),
+    },
+  };
+  assert.equal(canSubmitWhereToRun(draft), false);
+  assert.equal(resolveBackendIntent(draft), null);
+});
+
+test("ready remote server resolves to a key-bound deployment intent", () => {
+  const draft = {
+    ...emptyWhereToRunDraft,
+    runOn: "remote-server",
+    remote: {
+      enrollmentId: "c15e3cf6-d2ea-4b27-8e9e-2d2a0df4a92b",
+      expiresAt: 1_785_250_600,
+      ready: true,
+      setupCommand: "buzz-remote-agent ...",
+      workerPubkey: "a".repeat(64),
+    },
+  };
+  assert.equal(canSubmitWhereToRun(draft), true);
+  assert.deepEqual(resolveBackendIntent(draft), {
+    type: "remote",
+    deploymentId: "c15e3cf6-d2ea-4b27-8e9e-2d2a0df4a92b",
+    workerPubkey: "a".repeat(64),
+  });
+});

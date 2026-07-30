@@ -4,8 +4,8 @@
  * Loads the checked-in fixture and asserts that `getProviderEffortConfig`
  * matches every entry. Drift between `buzzAgentConfig.ts` and the fixture
  * (e.g. a new model family added to one side but not the other) fails CI.
- * The companion Rust test in `crates/buzz-agent/src/config.rs` mirrors
- * this check so both sides of the mirror must stay in sync.
+ * The agent package consumes the same provider/model vocabulary, while this
+ * fixture keeps UI defaults stable across releases.
  */
 
 import assert from "node:assert/strict";

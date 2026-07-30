@@ -1,0 +1,27 @@
+{
+  "name": "@buzz/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-admin": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && pnpm --filter @buzz/db build && pnpm --filter @buzz/pubsub build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && pnpm --filter @buzz/db build && pnpm --filter @buzz/pubsub build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*",
+    "@buzz/db": "workspace:*",
+    "@buzz/pubsub": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

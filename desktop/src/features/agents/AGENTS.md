@@ -10,10 +10,10 @@ Plan of record: `Buzz/Harness-Provider-Model.md` in Morgan's Obsidian vault
 
 ## The one rule
 
-**Harness capability facts have exactly one source: the Rust runtime catalog.**
-`KnownAcpRuntime` (`desktop/src-tauri/src/managed_agents/discovery/runtime_metadata.rs`)
-declares each harness's model/provider/effort env keys and capabilities. Spawn
-applies them; `AcpRuntimeCatalogEntry` exposes them over IPC; and
+**Harness capability facts have exactly one source: the TypeScript runtime catalog.**
+`RUNTIME_PRESETS` (`apps/desktop-host/src/runtime-presets.ts`) declares each
+harness's model/provider/effort environment keys and capabilities. The desktop
+host applies them; `AcpRuntimeCatalogEntry` exposes them over IPC; and
 `lib/agentConfigCore.ts` projects them into field descriptors. The frontend
 never maintains a rival copy of this table. Setup guidance follows the same
 rule: `requires_external_cli` is derived from `KnownAcpRuntime` and projected
@@ -22,7 +22,7 @@ to the UI rather than inferred from a runtime ID in a component.
 If you need a new capability fact (a new env key, a native option, a "supports
 X" flag): add it to `KnownAcpRuntime` first, expose it on
 `AcpRuntimeCatalogEntry`, then project it through the core. Do not shortcut
-with a TypeScript lookup table or an id comparison in a component.
+with a second frontend lookup table or an id comparison in a component.
 
 ## Rules
 
@@ -123,7 +123,8 @@ with a TypeScript lookup table or an id comparison in a component.
 - `desktop/tests/e2e/onboarding-agent-defaults.spec.ts` — onboarding behavior
   acceptance coverage for readiness, failure states, defaults, navigation,
   successful-empty vs failed optional-model discovery, and persistence races.
-- Rust: `runtime_metadata_env_vars` tests pin spawn-time key application.
+- `apps/desktop-host/src/runtime-catalog.test.ts` pins preset metadata and
+  spawn-time environment-key application.
 
 ## Keep this file true
 

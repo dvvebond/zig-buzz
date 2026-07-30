@@ -1,19 +1,18 @@
 name: Docker image
 
 # Builds and publishes the public Buzz relay images as ghcr.io/block/buzz.
-# Normal tags contain stripped binaries; matching debug-* tags contain the same
-# optimized binaries with line-table debug information for native profilers.
+# Normal and debug tags contain the same TypeScript runtime; debug tags are
+# retained as a compatibility alias and include JavaScript source maps.
 #
 # Strategy: each architecture builds on its native runner (ubuntu-24.04 for
 # amd64, ubuntu-24.04-arm for arm64), pushes to GHCR by digest, then a final
 # job stitches the per-arch digests into a single multi-arch manifest.
-# This avoids QEMU emulation (~10× slower for Rust) at zero cost on free
-# GitHub-hosted runners.
+# Native runners keep native Node dependencies architecture-correct without
+# QEMU emulation.
 #
 # Versioning: the relay is versioned independently of the desktop app via
 # its own `relay-v*` tags (see `just release-relay`). Desktop `v*` tags and
-# agent `sprig-v*` tags do NOT publish this image — only `relay-v*` does, so
-# the relay image version tracks crates/buzz-relay/Cargo.toml, never desktop.
+# agent `sprig-v*` tags do NOT publish this image — only `relay-v*` does.
 #
 # Triggers:
 #   - push to main           → :main + :sha-<7>
@@ -49,14 +48,14 @@ on:
       - "Dockerfile.push-gateway"
       - ".dockerignore"
       - ".github/workflows/docker.yml"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "crates/**"
+      - "apps/**"
+      - "packages/**"
       - "web/**"
+      - "admin-web/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
       - "patches/**"
   workflow_dispatch:
     inputs:
@@ -117,9 +116,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
         with:
-          # Default parallelism of 4 OOMs the 7GB GitHub runner during Rust
-          # compiles (see moby/buildkit#3969). Vaultwarden hit this; we will
-          # too without the cap.
+          # Keep workspace builds bounded on the 7GB GitHub runner because
+          # TypeScript and Vite compilation can overlap at peak RSS.
           buildkitd-config-inline: |
             [worker.oci]
               max-parallelism = 2

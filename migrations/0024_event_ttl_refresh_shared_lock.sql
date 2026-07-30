@@ -10,8 +10,8 @@
 --   * Event insert: shared channel-key lock -> read ttl_seconds. NULL returns
 --     with no tuple lock and no update; shared locks admit each other, so
 --     permanent-channel commits proceed concurrently.
---   * Permanent->ephemeral (or TTL-change) transition (update_channel in
---     crates/buzz-db/src/channel.rs) takes the same key EXCLUSIVE before its
+--   * Permanent->ephemeral (or TTL-change) transition
+--     (`packages/db/src/event-store.ts`) takes the same key EXCLUSIVE before its
 --     UPDATE. Either the transition commits first and the event's read sees
 --     the TTL (and refreshes), or the event commits first and the
 --     transition's own deadline reset is later than anything the event would

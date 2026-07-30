@@ -31,7 +31,8 @@ BUZZ_RELAY_URL=ws://localhost:3000 \
 BUZZ_CHANNEL_ID=<channel-uuid> \
 BUZZ_BOT_PRIVATE_KEY=<bot-nsec-or-hex-secret> \
 BUZZ_BOT_AUTH_MODE=standalone \
-cargo run --manifest-path examples/countdown-bot/Cargo.toml
+pnpm --filter @buzz/example-countdown-bot build
+pnpm --filter @buzz/example-countdown-bot start
 ```
 
 On a closed or allowlisted relay, add the bot pubkey as a relay member or to the
@@ -55,7 +56,8 @@ BUZZ_CHANNEL_ID=<channel-uuid> \
 BUZZ_BOT_PRIVATE_KEY=<bot-nsec-or-hex-secret> \
 BUZZ_OWNER_PRIVATE_KEY=<owner-or-agent-nsec-or-hex-secret> \
 BUZZ_BOT_AUTH_MODE=owner-attested \
-cargo run --manifest-path examples/countdown-bot/Cargo.toml
+pnpm --filter @buzz/example-countdown-bot build
+pnpm --filter @buzz/example-countdown-bot start
 ```
 
 Or precompute and pass the tag explicitly:
@@ -64,7 +66,8 @@ Or precompute and pass the tag explicitly:
 BUZZ_AUTH_TAG='["auth","<owner-pubkey>","","<sig>"]' \
 BUZZ_BOT_AUTH_MODE=owner-attested \
 # plus BUZZ_RELAY_URL, BUZZ_CHANNEL_ID, BUZZ_BOT_PRIVATE_KEY
-cargo run --manifest-path examples/countdown-bot/Cargo.toml
+pnpm --filter @buzz/example-countdown-bot build
+pnpm --filter @buzz/example-countdown-bot start
 ```
 
 Relay requirements for this path:
@@ -111,5 +114,6 @@ it to appear in members, resolve in mention autocomplete, or read/write messages
   for the bot pubkey. The Buzz UI adds that tag when the bot is selected from
   mention autocomplete.
 - The bot ignores its own messages to avoid feedback loops.
-- The example uses direct WebSocket + NIP-42 instead of MCP so the protocol path
-  is easy to inspect in one small file.
+- The example uses the shared TypeScript authenticated WebSocket client and
+  typed SDK builders instead of MCP, so the protocol path stays small and
+  independently testable.

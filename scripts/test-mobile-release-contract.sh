@@ -293,7 +293,20 @@ if (assert_no_removed_mobile_release_behavior "$tmp/forbidden-mobile-release-beh
     >/dev/null 2>&1; then
   fail "removed-behavior assertion did not reject a forbidden GitHub Release call"
 fi
-grep -Fq 'version: 0.0.0+1' "$repo_root/mobile/pubspec.yaml"
+node - "$repo_root/apps/mobile/package.json" "$repo_root/apps/mobile/app.json" <<'NODE'
+const fs = require("node:fs");
+const [packagePath, appPath] = process.argv.slice(2);
+const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+const appJson = JSON.parse(fs.readFileSync(appPath, "utf8"));
+if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(packageJson.version)) {
+  throw new Error(`invalid mobile package version: ${packageJson.version}`);
+}
+if (packageJson.version !== appJson.expo.version) {
+  throw new Error(
+    `mobile package/app version mismatch: ${packageJson.version} != ${appJson.expo.version}`,
+  );
+}
+NODE
 if grep -qE 'release-mobile|bump-mobile-version|get-current-mobile-version' "$repo_root/Justfile"; then
   fail "metadata-only mobile release recipe remains in Justfile"
 fi

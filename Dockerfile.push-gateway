@@ -1,37 +1,42 @@
 # syntax=docker/dockerfile:1.7
-ARG RUST_VERSION=1.95
+ARG NODE_VERSION=24
 ARG DEBIAN_VERSION=bookworm
 
-FROM rust:${RUST_VERSION}-${DEBIAN_VERSION} AS chef
-RUN cargo install cargo-chef --locked --version 0.1.71
+FROM node:${NODE_VERSION}-${DEBIAN_VERSION}-slim AS builder
 WORKDIR /build
-
-FROM chef AS planner
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    CI=true
+RUN corepack enable
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+RUN pnpm \
+      --config.store-dir=/pnpm/store \
+      --config.trust-lockfile=true \
+      --network-concurrency=8 \
+      --fetch-retries=5 \
+      --fetch-timeout=600000 \
+      --config.allow-unused-patches=true \
+      install --frozen-lockfile --filter @buzz/push-gateway...
+RUN pnpm --filter @buzz/push-gateway build
+RUN pnpm --config.store-dir=/pnpm/store --config.trust-lockfile=true --network-concurrency=8 --fetch-retries=5 --fetch-timeout=600000 --config.allow-unused-patches=true --filter @buzz/push-gateway deploy --prod /out/push-gateway \
+    && test -f /out/push-gateway/node_modules/@buzz/core/dist/index.js \
+    && tar --owner=1000 --group=1000 -C /out/push-gateway -czf /push-gateway.tgz .
 
-FROM chef AS builder
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=planner /build/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-COPY . .
-RUN cargo build --release --locked -p buzz-push-gateway --bin buzz-push-gateway \
-    && strip target/release/buzz-push-gateway
-
-FROM debian:${DEBIAN_VERSION}-slim AS runtime
+FROM node:${NODE_VERSION}-${DEBIAN_VERSION}-slim AS runtime
 LABEL org.opencontainers.image.title="Buzz Push Gateway" \
-      org.opencontainers.image.description="Capability-gated APNs last hop for Buzz" \
+      org.opencontainers.image.description="TypeScript capability-gated APNs last hop for Buzz" \
       org.opencontainers.image.source="https://github.com/block/buzz" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 1000 buzz \
-    && useradd --system --uid 1000 --gid 1000 --home-dir /var/lib/buzz --create-home --shell /usr/sbin/nologin buzz
-COPY --from=builder /build/target/release/buzz-push-gateway /usr/local/bin/buzz-push-gateway
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /push-gateway.tgz /tmp/push-gateway.tgz
+RUN mkdir -p /srv/buzz/push-gateway \
+    && tar -xzf /tmp/push-gateway.tgz -C /srv/buzz/push-gateway \
+    && rm /tmp/push-gateway.tgz \
+    && chmod 0755 /srv/buzz/push-gateway/dist/main.js \
+    && ln -s /srv/buzz/push-gateway/dist/main.js /usr/local/bin/buzz-push-gateway
+ENV NODE_ENV=production
 EXPOSE 8080 8081
-USER buzz:buzz
-WORKDIR /var/lib/buzz
+USER node:node
+WORKDIR /srv/buzz/push-gateway
 ENTRYPOINT ["/usr/local/bin/buzz-push-gateway"]

@@ -46,6 +46,7 @@ import {
   buildInstanceInputForDefinition,
   type BackendIntent,
 } from "../lib/instanceInputForDefinition";
+import { deployRemoteAgent } from "@/features/agents/remote/remoteAgentController";
 
 type PersonaFeedbackSurface = "catalog" | "library";
 
@@ -170,6 +171,27 @@ export function usePersonaActions() {
 
         if (resolveCreateIntent(intent) === "definition") {
           setPersonaNoticeMessage(`Created ${persona.displayName}.`);
+          setPersonaDialogState(null);
+          return true;
+        }
+        if (startIntent?.type === "remote") {
+          try {
+            const remote = await deployRemoteAgent({
+              deploymentId: startIntent.deploymentId,
+              persona,
+              runtime,
+              workerPubkey: startIntent.workerPubkey,
+            });
+            setPersonaNoticeMessage(
+              `Created and started ${remote.name} on the remote server.`,
+            );
+          } catch (error) {
+            setPersonaErrorMessage(
+              error instanceof Error
+                ? `${persona.displayName} was created, but remote deployment failed: ${error.message}`
+                : `${persona.displayName} was created, but remote deployment failed.`,
+            );
+          }
           setPersonaDialogState(null);
           return true;
         }

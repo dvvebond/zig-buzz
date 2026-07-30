@@ -82,11 +82,17 @@ export function resolveStartRuntimeForDefinition(
  *   is true because the preset commands deliberately override the
  *   definition's runtime preference.
  */
-export type BackendIntent = {
-  type: "provider";
-  id: string;
-  config: Record<string, unknown>;
-};
+export type BackendIntent =
+  | {
+      type: "provider";
+      id: string;
+      config: Record<string, unknown>;
+    }
+  | {
+      type: "remote";
+      deploymentId: string;
+      workerPubkey: string;
+    };
 
 /**
  * The single definition→instance mapping (Phase 1B.3.5 rows 2–4). Every
@@ -137,6 +143,11 @@ export async function buildInstanceInputForDefinition(
         config: backendIntent.config,
       },
     };
+  }
+  if (backendIntent?.type === "remote") {
+    throw new Error(
+      "remote instances are deployed through the secure remote-agent controller",
+    );
   }
 
   return {

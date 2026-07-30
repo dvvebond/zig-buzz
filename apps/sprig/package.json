@@ -1,0 +1,26 @@
+{
+  "name": "@buzz/sprig",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sprig": "./dist/main.js",
+    "buzz-acp": "./dist/main.js",
+    "buzz-agent": "./dist/main.js",
+    "buzz-dev-mcp": "./dist/main.js",
+    "buzz": "./dist/main.js",
+    "git-credential-nostr": "./dist/main.js",
+    "git-sign-nostr": "./dist/main.js",
+    "tree": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/cli build && pnpm --filter @buzz/dev-mcp build && pnpm --filter @buzz/git-credential-nostr build && pnpm --filter @buzz/git-sign-nostr build && tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

@@ -1,8 +1,9 @@
 /**
  * Source-of-truth constants for buzz-agent model-tuning configuration knobs.
  *
- * Values must stay in sync with `crates/buzz-agent/src/config.rs`
- * `parse_thinking_effort` — that function is the authoritative list.
+ * This module is the authoritative list. The env var names it exports are the
+ * contract the runtime is launched with, declared per runtime as
+ * `thinkingEnvVar`/`modelEnvVar` in `apps/desktop-host/src/runtime-catalog.ts`.
  */
 
 /** Env var key for the thinking/effort level sent to the LLM. */
@@ -18,8 +19,8 @@ export const BUZZ_AGENT_MAX_CONTEXT_TOKENS = "BUZZ_AGENT_MAX_CONTEXT_TOKENS";
 export const BUZZ_AGENT_MAX_ROUNDS = "BUZZ_AGENT_MAX_ROUNDS";
 
 /**
- * Ordered set of valid thinking-effort values accepted by buzz-agent.
- * Mirrors `parse_thinking_effort` in `crates/buzz-agent/src/config.rs`.
+ * Ordered set of valid thinking-effort values accepted by buzz-agent, passed
+ * through as the `BUZZ_AGENT_THINKING_EFFORT` environment variable.
  */
 export const BUZZ_AGENT_THINKING_EFFORT_VALUES = [
   "none",
@@ -47,9 +48,8 @@ export type ThinkingEffortValue =
  * This applies to Anthropic manual-budget models where the effort level maps
  * to a budget_tokens count — there is no "default effort level" in the API.
  *
- * Mirrors the model-family tables in `crates/buzz-agent/src/config.rs`
- * (`openai_efforts_for_model`, `is_manual_budget_model`,
- * `is_adaptive_thinking_model`, `clamp_adaptive_effort`). Keep in sync.
+ * The model-family tables below are the authority for this mapping; keep them
+ * in sync with the providers the agent runtime actually supports.
  */
 export type ProviderEffortConfig = {
   validValues: ReadonlyArray<ThinkingEffortValue>;

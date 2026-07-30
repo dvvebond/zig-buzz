@@ -1,6 +1,6 @@
 # Build artifacts
-/target/
 /dist/
+**/dist/
 /admin-web/dist/
 
 # lefthook-generated hook scripts (machine-specific)
@@ -26,6 +26,7 @@ Thumbs.db
 
 # Scratch / working files (AI reviews, notes, drafts)
 .scratch/
+.buzz-desktop/
 
 # Playwright artifacts
 playwright-report/
@@ -36,11 +37,14 @@ blob-report/
 # Node modules (pnpm workspace hoists to root)
 node_modules/
 
+# Expo continuous native generation and local state
+/apps/mobile/.expo/
+/apps/mobile/android/
+/apps/mobile/ios/
+/apps/mobile/.env.worktree.local
+
 # Root npm lockfiles are accidental; desktop uses pnpm in /desktop.
 /package-lock.json
-
-# sqlx offline query data (generated, not portable)
-.sqlx/
 
 # SQLite database (created by relay in CWD)
 buzz.db

@@ -145,7 +145,7 @@ guard let tiffData = newImage.tiffRepresentation,
 }
 
 // For simplicity, we'll create a PNG and then use iconutil if available,
-// or just save as PNG for the icon (Tauri can use PNG)
+// or save as PNG for clients that do not consume ICNS
 guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
     fputs("Failed to create PNG data\n", stderr)
     exit(1)

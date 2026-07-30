@@ -55,13 +55,28 @@ spec:
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.minio.enabled }}
-      # Quickstart only: the bundled MinIO bucket is created by a concurrent
-      # init Job (templates/quickstart-minio-init.yaml). The relay's A3 S3
-      # conformance probe is startup-fatal, so without this gate the relay Pods
-      # CrashLoopBackOff (with growing backoff) until the bucket appears. Block
-      # relay start until the bucket exists — deterministic, no crash-loops.
+      {{- if or .Values.migrate.autoMigrate .Values.minio.enabled }}
       initContainers:
+        {{- if .Values.migrate.autoMigrate }}
+        - name: migrate
+          image: {{ include "buzz.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.relay.containerSecurityContext | nindent 12 }}
+          command: ["/usr/local/bin/buzz-admin"]
+          args: ["migrate", "--directory", "/srv/buzz/migrations"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "buzz.envSecretName" . }}
+                  key: DATABASE_URL
+          resources:
+            {{- toYaml .Values.migrate.preUpgradeJob.resources | nindent 12 }}
+        {{- end }}
+        {{- if .Values.minio.enabled }}
+        # Quickstart only: wait for the concurrently created bucket before the
+        # TypeScript relay performs its startup object-store probe.
         - name: wait-for-bucket
           image: {{ .Values.minio.mcImage | quote }}
           securityContext:
@@ -89,6 +104,7 @@ spec:
                 echo "waiting for bucket {{ .Values.s3.bucket }}..."; sleep 2
               done
               echo "bucket {{ .Values.s3.bucket }} present"
+        {{- end }}
       {{- end }}
       containers:
         - name: relay
@@ -97,14 +113,10 @@ spec:
           securityContext:
             {{- toYaml .Values.relay.containerSecurityContext | nindent 12 }}
           ports:
-            - { name: app,     containerPort: 3000, protocol: TCP }
-            - { name: health,  containerPort: {{ .Values.service.healthPort }}, protocol: TCP }
-            - { name: metrics, containerPort: {{ .Values.service.metricsPort }}, protocol: TCP }
+            - { name: app, containerPort: 3000, protocol: TCP }
           env:
             # ── Networking ───────────────────────────────────────────
             - { name: BUZZ_BIND_ADDR,     value: {{ .Values.relay.bindAddr | quote }} }
-            - { name: BUZZ_HEALTH_PORT,   value: {{ .Values.service.healthPort | quote }} }
-            - { name: BUZZ_METRICS_PORT,  value: {{ .Values.service.metricsPort | quote }} }
             - { name: RELAY_URL,          value: {{ .Values.relayUrl | quote }} }
             {{- if .Values.pairingRelay.url }}
             - { name: BUZZ_PAIRING_RELAY_URL, value: {{ .Values.pairingRelay.url | quote }} }
@@ -138,9 +150,6 @@ spec:
 
             # ── Owner ────────────────────────────────────────────────
             - { name: RELAY_OWNER_PUBKEY, value: {{ .Values.ownerPubkey | quote }} }
-
-            # ── Migrations ───────────────────────────────────────────
-            - { name: BUZZ_AUTO_MIGRATE, value: {{ .Values.migrate.autoMigrate | quote }} }
 
             # ── Git ──────────────────────────────────────────────────
             - { name: BUZZ_GIT_REPO_PATH,         value: {{ .Values.persistence.git.mountPath | quote }} }
@@ -182,7 +191,7 @@ spec:
                   name: {{ include "buzz.envSecretName" . }}
                   key: READ_DATABASE_URL
                   optional: true
-            - name: REDIS_URL
+            - name: BUZZ_REDIS_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "buzz.envSecretName" . }}

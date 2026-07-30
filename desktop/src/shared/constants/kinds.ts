@@ -54,6 +54,12 @@ export const KIND_TEAM = 30176;
 export const KIND_MANAGED_AGENT = 30177;
 export const KIND_USER_STATUS = 30315;
 export const KIND_AGENT_OBSERVER_FRAME = 24200;
+// BRAP v1 remote-agent control events. All are ephemeral, recipient p-gated,
+// signed, and NIP-44 encrypted; the relay must never persist or index them.
+export const KIND_REMOTE_AGENT_ENROLLMENT = 24210;
+export const KIND_REMOTE_AGENT_COMMAND = 24211;
+export const KIND_REMOTE_AGENT_STATUS = 24212;
+export const KIND_REMOTE_AGENT_ACK = 24213;
 export const KIND_AGENT_TURN_METRIC = 44200;
 export const KIND_EVENT_REMINDER = 30300;
 export const KIND_REPO_ANNOUNCEMENT = 30617;

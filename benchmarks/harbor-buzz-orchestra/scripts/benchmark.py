@@ -48,7 +48,7 @@ COMPOSE_FILES = (
 RELAY_HTTP_PORT = 3600
 PG_HOST_PORT = 5633
 METRICS_HOST_PORT = 9602
-GUI_BUNDLE_IDENTIFIER = "xyz.block.buzz.app.benchmark"
+GUI_DATA_DIR = STATE_DIR / "desktop"
 
 DEFAULT_DATASET = "terminal-bench/terminal-bench-2-1"
 DEFAULT_ATTEMPTS = 5
@@ -56,18 +56,16 @@ DEFAULT_MANIFEST = PACKAGE_ROOT / "manifests" / "tb-cobol-sonnet-haiku.yaml"
 DEFAULT_ENDPOINTS = PACKAGE_ROOT / "testbed" / "endpoints" / "anthropic-live.json"
 SCHEMA_SQL = PACKAGE_ROOT / "testbed" / "sql" / "benchmark_schema.sql"
 
-# Linux builds of the production agent stack, uploaded into each task
-# container per trial. Built once in a rust:alpine container (musl → fully
-# static, runs on any Linux task image of the same architecture) and cached.
+# Executable TypeScript bundles of the production agent stack, uploaded into
+# each task container per trial. They are built once and cached. Task images
+# need Node.js 22+, which the runtime verifies before uploading anything.
 AGENT_BINARIES = ("buzz-acp", "buzz-agent", "buzz-dev-mcp")
-# Std-only loopback forwarder (not a workspace crate): agents dial the
+# Dependency-free loopback forwarder: agents dial the
 # relay's canonical localhost address inside the task container and the
-# forwarder bridges to the Docker host gateway. Compiled with plain rustc
-# in the same cross-build step.
-FORWARDER_SOURCE = PACKAGE_ROOT / "forwarder" / "relay_forwarder.rs"
+# forwarder bridges to the Docker host gateway.
+FORWARDER_SOURCE = PACKAGE_ROOT / "forwarder" / "relay-forwarder.ts"
 FORWARDER_BINARY = "relay-forwarder"
-LINUX_TARGET_DIR = STATE_DIR / "linux-target"
-RUST_IMAGE = "rust:1.95-alpine"
+TYPESCRIPT_BIN_DIR = STATE_DIR / "typescript-bin"
 
 _spec = importlib.util.spec_from_file_location(
     "run_leaderboard", Path(__file__).resolve().parent / "run_leaderboard.py"
@@ -342,77 +340,53 @@ def ensure_stack(state: dict[str, str]) -> None:
 
 
 def ensure_binaries() -> dict[str, Path]:
-    """Find the host buzz CLI, building it once if missing."""
-    try:
-        return run_leaderboard.find_binaries(None)
-    except SystemExit:
-        print("host buzz CLI missing — building (cargo build, first run only)...")
-    cargo = REPO_ROOT / "bin" / "cargo"
-    subprocess.run(
-        [str(cargo), "build", "-p", "buzz-cli"],
-        cwd=REPO_ROOT,
-        check=True,
-    )
-    return run_leaderboard.find_binaries(None)
-
-
-def linux_triple() -> str:
-    """The musl triple matching the Docker engine that runs task containers."""
-    arch = subprocess.run(
-        ["docker", "version", "--format", "{{.Server.Arch}}"],
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
-    try:
-        return {
-            "arm64": "aarch64-unknown-linux-musl",
-            "amd64": "x86_64-unknown-linux-musl",
-        }[arch]
-    except KeyError:
-        raise SystemExit(f"unsupported Docker architecture: {arch!r}") from None
+    """Build and return the host Buzz CLI bundle."""
+    return run_leaderboard.find_binaries(ensure_agent_binaries())
 
 
 def ensure_agent_binaries() -> Path:
-    """Cross-build the static Linux agent stack once, cached in .benchmark/.
-
-    The agents run *inside* each Harbor task container as the real
-    buzz-acp → buzz-agent → buzz-dev-mcp stack, so the binaries must be
-    Linux ELF for the task image architecture. musl-static means they run
-    on any Linux base image (glibc or not). The relay loopback forwarder
-    is compiled in the same step with plain rustc (std-only, no deps).
-    """
-    triple = linux_triple()
-    bin_dir = LINUX_TARGET_DIR / triple / "release"
-    targets = AGENT_BINARIES + (FORWARDER_BINARY,)
+    """Build executable TypeScript bundles once, cached in .benchmark/."""
+    bin_dir = TYPESCRIPT_BIN_DIR
+    targets = ("buzz",) + AGENT_BINARIES + (FORWARDER_BINARY,)
     if all((bin_dir / name).is_file() for name in targets):
         return bin_dir
-    print(f"Linux agent binaries missing — cross-building for {triple} "
-          f"in {RUST_IMAGE} (first run only, ~2 min)...")
-    LINUX_TARGET_DIR.mkdir(parents=True, exist_ok=True)
-    (STATE_DIR / "cargo-registry").mkdir(exist_ok=True)
-    packages = [arg for name in AGENT_BINARIES for arg in ("-p", name)]
-    forwarder_src = FORWARDER_SOURCE.relative_to(REPO_ROOT)
+    print("TypeScript benchmark bundles missing — building (first run only)...")
+    bin_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        [
-            "docker", "run", "--rm",
-            "-v", f"{REPO_ROOT}:/src:ro",
-            "-v", f"{LINUX_TARGET_DIR}:/target",
-            "-v", f"{STATE_DIR / 'cargo-registry'}:/usr/local/cargo/registry",
-            "-e", "CARGO_TARGET_DIR=/target",
-            "-w", "/src",
-            RUST_IMAGE,
-            "sh", "-c",
-            "apk add --no-cache musl-dev >/dev/null && "
-            f"cargo build --release --locked --target {triple} "
-            + " ".join(packages)
-            + f" && rustc --edition 2021 -O --target {triple}"
-            f" -o /target/{triple}/release/{FORWARDER_BINARY}"
-            f" /src/{forwarder_src}",
-        ],
+        ["pnpm", "--filter", "@buzz/sprig", "build"],
+        cwd=REPO_ROOT,
         check=True,
     )
+    entries = {
+        "buzz": REPO_ROOT / "packages" / "cli" / "dist" / "main.js",
+        "buzz-acp": REPO_ROOT / "packages" / "acp" / "dist" / "main.js",
+        "buzz-agent": REPO_ROOT / "packages" / "agent" / "dist" / "main.js",
+        "buzz-dev-mcp": REPO_ROOT / "packages" / "dev-mcp" / "dist" / "main.js",
+        FORWARDER_BINARY: FORWARDER_SOURCE,
+    }
+    for name, entry in entries.items():
+        subprocess.run(
+            [
+                "pnpm",
+                "exec",
+                "esbuild",
+                str(entry),
+                "--bundle",
+                "--platform=node",
+                "--format=esm",
+                "--target=node22",
+                f"--outfile={bin_dir / name}",
+                "--banner:js=import { createRequire as __buzzCreateRequire } "
+                "from 'node:module'; const require = "
+                "__buzzCreateRequire(import.meta.url);",
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+        )
+        (bin_dir / name).chmod(0o755)
     missing = [n for n in targets if not (bin_dir / n).is_file()]
     if missing:
-        raise SystemExit(f"cross-build produced no {', '.join(missing)} in {bin_dir}")
+        raise SystemExit(f"bundle build produced no {', '.join(missing)} in {bin_dir}")
     return bin_dir
 
 
@@ -435,49 +409,18 @@ def launch_gui(state: dict[str, str]) -> subprocess.Popen:
         check=True,
     )
 
-    desktop_dir = REPO_ROOT / "desktop"
-    if not (desktop_dir / "node_modules").is_dir():
-        subprocess.run(["pnpm", "install"], cwd=desktop_dir, check=True)
-
-    # tauri dev needs sidecar files present; stub them and drop in the real
-    # CLI binary (mirrors the just staging recipe).
-    target = subprocess.run(
-        ["rustc", "-vV"], capture_output=True, text=True, check=True
-    ).stdout
-    triple = next(
-        line.split(": ", 1)[1] for line in target.splitlines() if line.startswith("host: ")
-    )
-    sidecar_dir = desktop_dir / "src-tauri" / "binaries"
-    sidecar_dir.mkdir(parents=True, exist_ok=True)
-    binaries = ensure_binaries()
-    for name in ("buzz-acp", "buzz-agent", "buzz-dev-mcp", "git-credential-nostr", "buzz"):
-        stub = sidecar_dir / f"{name}-{triple}"
-        if not stub.exists():
-            stub.touch()
-    real_cli = sidecar_dir / f"buzz-{triple}"
-    real_cli.write_bytes(binaries["buzz"].read_bytes())
-    real_cli.chmod(0o755)
-
     print(
         f"Opening Buzz GUI as the benchmark user ({state['user_pubkey'][:16]}…).\n"
         "Watch, don't type — a message from you mid-trial would taint the run."
     )
-    # Distinct bundle identifier: the desktop app persists workspaces (incl.
-    # their relay URLs) in per-identifier WebKit localStorage, and a stored
-    # workspace's relay URL overrides BUZZ_RELAY_URL by design. Reusing the
-    # default identifier means any past local-dev session's ws://localhost:3000
-    # workspace silently shadows the benchmark relay. An identifier of our own
-    # keeps that state isolated both ways.
-    tauri_config = json.dumps(
-        {"identifier": GUI_BUNDLE_IDENTIFIER, "productName": "Buzz Benchmark"}
-    )
     return subprocess.Popen(
-        ["pnpm", "exec", "tauri", "dev", "--config", tauri_config],
-        cwd=desktop_dir,
+        ["pnpm", "desktop"],
+        cwd=REPO_ROOT,
         env={
             **os.environ,
             "BUZZ_RELAY_URL": f"ws://localhost:{RELAY_HTTP_PORT}",
             "BUZZ_PRIVATE_KEY": state["user_secret_key"],
+            "BUZZ_DESKTOP_DATA_DIR": str(GUI_DATA_DIR),
         },
     )
 
@@ -531,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
     provisioner_config = write_provisioner_config(state, args.endpoint_config)
 
     if args.dry_run:
-        agent_bin_dir = LINUX_TARGET_DIR / linux_triple() / "release"
+        agent_bin_dir = TYPESCRIPT_BIN_DIR
     else:
         ensure_binaries()
         agent_bin_dir = ensure_agent_binaries()

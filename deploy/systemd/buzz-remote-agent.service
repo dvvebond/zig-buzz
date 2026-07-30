@@ -1,0 +1,31 @@
+[Unit]
+Description=Buzz outbound remote agent worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=buzz-agent
+Group=buzz-agent
+EnvironmentFile=/etc/buzz/remote-agent.env
+ExecStart=/usr/local/bin/buzz-remote-agent --relay ${BUZZ_RELAY_URL} --data-dir /var/lib/buzz/remote-agent
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/buzz/remote-agent
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

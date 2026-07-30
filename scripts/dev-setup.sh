@@ -128,7 +128,8 @@ until postgres_accepting_connections; do
   sleep 2
 done
 
-"${REPO_ROOT}/bin/cargo" run -p buzz-admin -- migrate
+pnpm --filter @buzz/admin build
+node "${REPO_ROOT}/apps/admin/dist/main.js" migrate
 "${REPO_ROOT}/scripts/seed-local-community.sh"
 success "Database migrations complete"
 

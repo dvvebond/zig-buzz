@@ -190,12 +190,36 @@ async def test_install_stack_uploads_the_pinned_stack(tmp_path):
         f"{REMOTE_BIN}/buzz-dev-mcp",
     }
     assert any("chmod 0755" in cmd for cmd, _ in environment.commands)
+    assert any("command -v node" in cmd for cmd, _ in environment.commands)
 
 
 async def test_install_stack_requires_binaries_on_disk(tmp_path):
     rt = runtime(tmp_path, buzz_acp_binary=str(tmp_path / "missing"))
     with pytest.raises(RuntimeLaunchError, match="binary not found"):
         await rt._install_stack(Environment())
+
+
+async def test_install_stack_requires_node_22(tmp_path):
+    binaries = {}
+    for name in ("buzz-acp", "buzz-agent", "buzz-dev-mcp"):
+        path = tmp_path / name
+        path.write_text("#!/usr/bin/env node")
+        binaries[name] = str(path)
+    rt = runtime(
+        tmp_path,
+        buzz_acp_binary=binaries["buzz-acp"],
+        buzz_agent_binary=binaries["buzz-agent"],
+        buzz_dev_mcp_binary=binaries["buzz-dev-mcp"],
+    )
+    environment = Environment(
+        responses={
+            "command -v node": ExecResult(
+                stdout="", stderr="node is unavailable", return_code=1
+            )
+        }
+    )
+    with pytest.raises(RuntimeLaunchError, match="Node.js 22"):
+        await rt._install_stack(environment)
 
 
 async def test_forwarder_bridges_the_canonical_relay_address(tmp_path):

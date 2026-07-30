@@ -2,7 +2,7 @@
 
 Desktop chat shell with:
 
-- Tauri + React + TypeScript + Vite
+- TypeScript desktop host + React + TypeScript + Vite
 - Tailwind CSS
 - shadcn/ui-ready shared components
 - Biome (lint/format/check)
@@ -11,7 +11,7 @@ Desktop chat shell with:
 ## Scripts
 
 - `pnpm dev` - run the web frontend
-- `pnpm tauri dev` - run the desktop app
+- `pnpm desktop` - build and run the complete desktop app
 - `pnpm build` - typecheck and build frontend
 - `pnpm typecheck` - TypeScript checks
 - `pnpm lint` - Biome lint
@@ -23,3 +23,6 @@ Desktop chat shell with:
 - `src/shared` - reusable app-wide code (`ui`, `lib`, `styles`)
 - `src/features` - feature modules (vertical slices)
 - `src/app` - top-level app composition
+- `../apps/desktop-host` - secure loopback host and OS integration
+- `src/native/tauriShim.ts` - compatibility adapter for the existing frontend
+  API surface; it contains no Rust or Tauri runtime

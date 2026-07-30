@@ -3,7 +3,7 @@
 #
 # The relay intentionally fails closed when the request Host header is not in
 # `communities`. Local dev uses loopback hosts, so bootstrap must create those
-# rows after migrations before desktop/Tauri HTTP bridge calls can succeed.
+# rows after migrations before desktop-host bridge calls can succeed.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

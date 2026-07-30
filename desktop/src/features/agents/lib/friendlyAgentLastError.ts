@@ -2,16 +2,15 @@
  * Promote certain machine-readable `lastError` strings to user-facing copy.
  *
  * The error classification seam flows like this:
- *   buzz-agent — classifies LLM failures into `AgentError` variants with
- *                  JSON-RPC codes (`-32001` auth, `-32002` model-not-found,
- *                  `-32000` generic), defined in `crates/buzz-agent/src/types.rs`.
- *   buzz-acp   — preserves the code structurally in
- *                  `AcpError::AgentError { code, message }`, whose Display is
- *                  `"Agent reported error (code N): message"`, and includes
- *                  `code` in `turn_error` observer events.
+ *   agent harness — classifies LLM failures with JSON-RPC codes (`-32001`
+ *                  auth, `-32002` model-not-found, `-32000` generic). This is
+ *                  a wire contract, so any ACP harness may supply it.
+ *   ACP layer   — preserves the code structurally alongside the message,
+ *                  rendering it as `"Agent reported error (code N): message"`,
+ *                  and includes `code` in `turn_error` observer events.
  *   desktop supervisor — on nonzero exit, recovers `{ message, code }` from
- *                  the log tail (`managed_agents/storage.rs`) into
- *                  `ManagedAgent.lastError` / `lastErrorCode`.
+ *                  the log tail (`apps/desktop-host/src/managed-agents.ts`)
+ *                  into `ManagedAgent.lastError` / `lastErrorCode`.
  *
  * This function dispatches on the numeric code first (works for any harness),
  * then recovers a code embedded in the message string (handles records where

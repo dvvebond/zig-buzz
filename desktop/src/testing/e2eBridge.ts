@@ -8014,7 +8014,7 @@ async function handleUpdateManagedAgent(args: {
  * Mock-mode `search_messages` predicate, mirroring the relay's filter contract.
  *
  * `since`/`until` are NIP-01 bounds and both inclusive — the relay keeps events
- * where `since <= created_at <= until` (`crates/buzz-core/src/filter.rs`). The
+ * where `since <= created_at <= until` (`packages/core/src/filter.ts`). The
  * `before:` operator's exclusivity is encoded upstream in
  * `parseSearchOperators`, which subtracts a second; the mock must not subtract
  * it a second time.
@@ -9768,7 +9768,7 @@ export function maybeInstallE2eTauriMocks() {
                 "export function useProjectRepoSnapshotQuery(project) {\n  return useQuery({ queryKey: [project.id, 'repo-snapshot'] });\n}\n",
             },
             {
-              path: "crates/buzz-relay/src/api/git/transport.rs",
+              path: "apps/relay/src/git-http.ts",
               kind: "blob",
               size: 33120,
               preview_content:

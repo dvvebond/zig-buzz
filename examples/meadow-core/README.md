@@ -44,4 +44,5 @@ Edit any `.persona.md` file to change the agent's behavior. The YAML
 frontmatter controls config (model, triggers, channels). The markdown
 body is the system prompt.
 
-See `crates/buzz-persona/PERSONA_PACK_SPEC.md` for the full format reference.
+See [`docs/persona-pack-spec.md`](../../docs/persona-pack-spec.md) for the full
+format reference.

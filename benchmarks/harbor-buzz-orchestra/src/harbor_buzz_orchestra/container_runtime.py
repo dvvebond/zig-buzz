@@ -2,9 +2,9 @@
 
 Each provisioned identity is a full ``buzz-acp`` → ``buzz-agent`` →
 ``buzz-dev-mcp`` process tree launched *inside* the task container — the same
-binaries and the same MCP toolset (shell, file tools, the ``buzz`` CLI on
+TypeScript runtime and the same MCP toolset (shell, file tools, the ``buzz`` CLI on
 PATH) that the desktop app gives a Buzz agent. The harness stays outside:
-it provisions, uploads the pinned binaries, posts the task as the trial
+it provisions, uploads the pinned bundles, posts the task as the trial
 user, and observes the channel until the orchestrator publishes DONE.
 """
 
@@ -88,7 +88,7 @@ class BuzzContainerRuntime:
         self.logs_dir = Path(logs_dir)
         self.artifact_root = Path(artifact_root)
         self.endpoints = endpoints
-        # Linux builds uploaded into the task container:
+        # Executable TypeScript bundles uploaded into the task container:
         self.buzz_acp_binary = buzz_acp_binary
         self.buzz_agent_binary = buzz_agent_binary
         self.buzz_dev_mcp_binary = buzz_dev_mcp_binary
@@ -183,7 +183,7 @@ class BuzzContainerRuntime:
     # -- container setup ------------------------------------------------------
 
     async def _install_stack(self, environment: BaseEnvironment) -> None:
-        """Upload the pinned Linux binaries into the task container."""
+        """Verify Node.js and upload the pinned TypeScript bundles."""
         uploads = {
             f"{REMOTE_BIN}/buzz-acp": self.buzz_acp_binary,
             f"{REMOTE_BIN}/buzz-agent": self.buzz_agent_binary,
@@ -201,6 +201,15 @@ class BuzzContainerRuntime:
             raise RuntimeLaunchError(
                 f"cannot create {REMOTE_ROOT} in the task container: "
                 f"{result.stderr or result.stdout}"
+            )
+        node_check = await environment.exec(
+            "command -v node >/dev/null 2>&1 && "
+            "node -e 'const m=Number(process.versions.node.split(\".\")[0]);"
+            "if(m<22)process.exit(1)'"
+        )
+        if node_check.return_code != 0:
+            raise RuntimeLaunchError(
+                "the task container must provide Node.js 22 or newer"
             )
         for target, source in uploads.items():
             await environment.upload_file(source, target)

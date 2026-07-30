@@ -54,12 +54,32 @@ CREATE TABLE communities (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     host            VARCHAR(255) NOT NULL,
     signing_key     BYTEA,
+    icon            TEXT,
+    relay_membership_snapshot_at BIGINT NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     archived_at     TIMESTAMPTZ,
-    CONSTRAINT chk_communities_id_not_nil CHECK (id <> '00000000-0000-0000-0000-000000000000'::uuid)
+    CONSTRAINT chk_communities_id_not_nil CHECK (id <> '00000000-0000-0000-0000-000000000000'::uuid),
+    CONSTRAINT chk_relay_membership_snapshot_at_nonnegative
+        CHECK (relay_membership_snapshot_at >= 0)
 );
 
 CREATE UNIQUE INDEX idx_communities_host ON communities (lower(host));
+
+-- Git repository names are unique per tenant. Authoritative repository
+-- contents live in immutable object storage; this registry only serializes
+-- name allocation and enforces per-owner quotas.
+CREATE TABLE git_repo_names (
+    community_id UUID NOT NULL REFERENCES communities(id),
+    repo_id TEXT NOT NULL,
+    owner_pubkey TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (community_id, repo_id),
+    CONSTRAINT chk_git_repo_owner_pubkey
+        CHECK (owner_pubkey ~ '^[0-9a-f]{64}$')
+);
+
+CREATE INDEX idx_git_repo_names_owner
+    ON git_repo_names (community_id, owner_pubkey);
 
 -- ── Channels ──────────────────────────────────────────────────────────────────
 -- Conformance: "Channels and channel membership". `community_id` immutable.
@@ -95,8 +115,11 @@ CREATE TABLE channels (
     participant_hash BYTEA,
     ttl_seconds     INT,
     ttl_deadline    TIMESTAMPTZ,
+    relay_snapshot_created_at BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (community_id, id),
-    CONSTRAINT chk_channels_id_not_nil CHECK (id <> '00000000-0000-0000-0000-000000000000'::uuid)
+    CONSTRAINT chk_channels_id_not_nil CHECK (id <> '00000000-0000-0000-0000-000000000000'::uuid),
+    CONSTRAINT chk_relay_snapshot_created_at_nonnegative
+        CHECK (relay_snapshot_created_at >= 0)
 );
 
 -- nip29 group id and DM participant hash are unique WITHIN a community, not globally.
@@ -609,6 +632,55 @@ CREATE TABLE relay_invites (
 
 CREATE INDEX relay_invites_expires_at_idx ON relay_invites (expires_at);
 
+-- ── Secure remote-agent enrollment (BRAP v1) ─────────────────────────────────
+-- Bearer secrets are stored only as SHA-256 hashes. Redemption locks one
+-- tenant-scoped row, binds exactly one worker key, and requires a separately
+-- signed owner approval before the relay will route control events.
+
+CREATE TABLE remote_agent_enrollments (
+    community_id       UUID        NOT NULL REFERENCES communities(id),
+    id                 UUID        NOT NULL DEFAULT gen_random_uuid(),
+    token_hash         BYTEA       NOT NULL CHECK (length(token_hash) = 32),
+    owner_pubkey       TEXT        NOT NULL CHECK (owner_pubkey ~ '^[0-9a-f]{64}$'),
+    capabilities       JSONB       NOT NULL,
+    expires_at         TIMESTAMPTZ NOT NULL,
+    used_at            TIMESTAMPTZ,
+    worker_pubkey      TEXT        CHECK (
+        worker_pubkey IS NULL OR worker_pubkey ~ '^[0-9a-f]{64}$'
+    ),
+    enrollment_event_id BYTEA      CHECK (
+        enrollment_event_id IS NULL OR length(enrollment_event_id) = 32
+    ),
+    approval_event_id  BYTEA       CHECK (
+        approval_event_id IS NULL OR length(approval_event_id) = 32
+    ),
+    approved_at        TIMESTAMPTZ,
+    revoked_at         TIMESTAMPTZ,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (community_id, id),
+    UNIQUE (community_id, token_hash),
+    CHECK (jsonb_typeof(capabilities) = 'array'),
+    CHECK (
+        (used_at IS NULL AND worker_pubkey IS NULL AND enrollment_event_id IS NULL)
+        OR
+        (used_at IS NOT NULL AND worker_pubkey IS NOT NULL AND enrollment_event_id IS NOT NULL)
+    ),
+    CHECK (approved_at IS NULL OR used_at IS NOT NULL),
+    CHECK (revoked_at IS NULL OR used_at IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX remote_agent_active_worker_idx
+    ON remote_agent_enrollments (community_id, worker_pubkey)
+    WHERE worker_pubkey IS NOT NULL AND revoked_at IS NULL;
+
+CREATE INDEX remote_agent_owner_idx
+    ON remote_agent_enrollments (community_id, owner_pubkey, created_at DESC);
+
+CREATE INDEX remote_agent_expiry_idx
+    ON remote_agent_enrollments (expires_at)
+    WHERE used_at IS NULL;
+
 -- ── Archived identities (NIP-IA) ──────────────────────────────────────────────
 -- Conformance: archive cannot hide a key in another community. PK scoped.
 
@@ -858,7 +930,7 @@ CREATE INDEX push_match_queue_recovery
 -- T1b push gate (keep in sync with migrations/0023). Enqueue only when the
 -- community has an active, endpoint-enabled, unexpired lease; the shared
 -- advisory lock pairs with the exclusive lock taken by lease activations
--- (crates/buzz-db/src/push.rs) to close the lost-wake race.
+-- (apps/relay/src/push-lease.ts) to close the lost-wake race.
 CREATE FUNCTION enqueue_push_match_job() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -892,8 +964,8 @@ FOR EACH ROW EXECUTE FUNCTION enqueue_push_match_job();
 -- the transaction that makes a channel-scoped event durable, so a TTL
 -- transition committed while ingest was in flight is never missed. The
 -- per-channel advisory lock is SHARED here — permanent-channel commits admit
--- each other — and taken EXCLUSIVE by TTL transitions (update_channel in
--- crates/buzz-db/src/channel.rs), which forces the same total order the
+-- each other — and taken EXCLUSIVE by TTL transitions
+-- (packages/db/src/event-store.ts), which forces the same total order the
 -- 0022 row lock provided without serializing the hot path.
 CREATE FUNCTION refresh_channel_ttl_after_event_insert() RETURNS trigger
 LANGUAGE plpgsql AS $$
