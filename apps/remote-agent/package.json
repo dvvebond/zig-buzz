@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && tsc -p tsconfig.build.json",
+    "build": "pnpm --filter @buzz/core build && pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && tsc -p tsconfig.build.json",
     "check": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/core build && pnpm --filter @buzz/remote-agent-protocol build && tsc -p tsconfig.json --noEmit && vitest run",
     "start": "node dist/main.js",
     "test": "vitest run src"

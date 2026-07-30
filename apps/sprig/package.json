@@ -14,9 +14,10 @@
     "tree": "./dist/main.js"
   },
   "scripts": {
-    "build": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/cli build && pnpm --filter @buzz/dev-mcp build && pnpm --filter @buzz/git-credential-nostr build && pnpm --filter @buzz/git-sign-nostr build && tsc -p tsconfig.build.json",
-    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
-    "test": "vitest run src"
+    "build": "pnpm build:personalities && tsc -p tsconfig.build.json",
+    "build:personalities": "pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/cli build && pnpm --filter @buzz/dev-mcp build && pnpm --filter @buzz/git-credential-nostr build && pnpm --filter @buzz/git-sign-nostr build",
+    "check": "pnpm build:personalities && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "pnpm build:personalities && vitest run src"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",

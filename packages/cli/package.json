@@ -14,8 +14,8 @@
     }
   },
   "scripts": {
-    "build": "pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.build.json",
-    "check": "pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "build": "pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.json --noEmit && vitest run src",
     "test": "vitest run src"
   },
   "dependencies": {

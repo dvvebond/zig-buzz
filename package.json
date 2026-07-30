@@ -5,7 +5,8 @@
   "scripts": {
     "build:typescript": "pnpm --filter './packages/**' --filter './apps/**' --filter './examples/**' build",
     "build": "pnpm build:typescript && pnpm -C desktop build && pnpm -C web build && pnpm -C admin-web build",
-    "check": "pnpm -r check",
+    "check": "pnpm check:build-order && pnpm -r check",
+    "check:build-order": "node scripts/check-build-order.mjs",
     "desktop": "pnpm -C desktop desktop",
     "format": "pnpm exec biome format --write apps packages examples",
     "format:check": "pnpm exec biome format apps packages examples",

@@ -49,6 +49,9 @@ RELAY_HTTP_PORT = 3600
 PG_HOST_PORT = 5633
 METRICS_HOST_PORT = 9602
 GUI_DATA_DIR = STATE_DIR / "desktop"
+# macOS keeps per-application state under ~/Library/<domain>/<bundle id>, so
+# --fresh needs the identifier to clear the benchmark GUI's WebKit databases.
+GUI_BUNDLE_IDENTIFIER = "xyz.block.buzz.app.benchmark"
 
 DEFAULT_DATASET = "terminal-bench/terminal-bench-2-1"
 DEFAULT_ATTEMPTS = 5
@@ -376,9 +379,11 @@ def ensure_agent_binaries() -> Path:
                 "--format=esm",
                 "--target=node22",
                 f"--outfile={bin_dir / name}",
-                "--banner:js=import { createRequire as __buzzCreateRequire } "
-                "from 'node:module'; const require = "
-                "__buzzCreateRequire(import.meta.url);",
+                (
+                    "--banner:js=import { createRequire as __buzzCreateRequire } "
+                    "from 'node:module'; const require = "
+                    "__buzzCreateRequire(import.meta.url);"
+                ),
             ],
             cwd=REPO_ROOT,
             check=True,
@@ -452,8 +457,10 @@ def leaderboard_argv(
         # BUZZ_BENCHMARK_DOCKER_HOST if your engine exposes the host
         # differently.
         "--relay-gateway",
-        f"{os.environ.get('BUZZ_BENCHMARK_DOCKER_HOST', 'host.docker.internal')}"
-        f":{RELAY_HTTP_PORT}",
+        (
+            f"{os.environ.get('BUZZ_BENCHMARK_DOCKER_HOST', 'host.docker.internal')}"
+            f":{RELAY_HTTP_PORT}"
+        ),
         "--n-concurrent", str(args.n_concurrent),
         "--jobs-dir", str(args.jobs_dir),
     ]

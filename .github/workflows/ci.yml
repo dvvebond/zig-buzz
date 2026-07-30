@@ -80,7 +80,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # Playwright is a devDependency of the client packages, not the root, and
+      # the browser download is a shared machine-level cache, so installing it
+      # once from desktop also serves the web and admin-web smoke runs.
+      - run: pnpm -C desktop exec playwright install --with-deps chromium
       - name: Desktop smoke
         run: pnpm -C desktop test:e2e:smoke
       - name: Web smoke

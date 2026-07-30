@@ -24,7 +24,6 @@ from .manifest import AgentClass, ExperimentManifest
 from .provisioning import AgentCredential, TrialHandle
 from .runtime import RuntimeResult
 
-
 DEFAULT_MAX_AGENT_ROUNDS = 32
 # Container-side layout for the uploaded Buzz stack.
 REMOTE_ROOT = "/opt/buzz"
@@ -477,7 +476,7 @@ class BuzzContainerRuntime:
             await environment.exec(sweep)
             await asyncio.sleep(2)
             await environment.exec(sweep.replace("-TERM", "-KILL"))
-        except Exception:  # noqa: BLE001 — environment may already be gone
+        except Exception:  # noqa: BLE001, S110 — environment may already be gone
             pass
 
     async def _collect_logs(
@@ -485,7 +484,7 @@ class BuzzContainerRuntime:
     ) -> None:
         try:
             await environment.download_dir(REMOTE_LOGS, trial_dir)
-        except Exception:  # noqa: BLE001 — best effort; env may be torn down
+        except Exception:  # noqa: BLE001, S110 — best effort; env may be torn down
             pass
 
     # -- Buzz CLI as the trial user / provisioning identities -------------------
@@ -623,9 +622,11 @@ class BuzzContainerRuntime:
             "",
             f"You are `{credential.agent_id}` (pubkey `{credential.nostr_pubkey}`).",
             f"The team coordinates in Buzz channel `{trial.channel_id}`.",
-            f"Tasks come from the user `{trial.user.agent_id}` "
-            f"(pubkey `{trial.user.nostr_pubkey}`); address your final report "
-            "to them.",
+            (
+                f"Tasks come from the user `{trial.user.agent_id}` "
+                f"(pubkey `{trial.user.nostr_pubkey}`); address your final "
+                "report to them."
+            ),
             "",
             "| Name | Role | Pubkey |",
             "|------|------|--------|",

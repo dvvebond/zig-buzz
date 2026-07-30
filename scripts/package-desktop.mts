@@ -22,7 +22,10 @@ const parsed = parseArgs({
   options: {
     archive: { type: "boolean", default: false },
     out: { type: "string" },
-    platform: { type: "string", default: `${process.platform}-${process.arch}` },
+    platform: {
+      type: "string",
+      default: `${process.platform}-${process.arch}`,
+    },
   },
   strict: true,
 });
@@ -80,9 +83,13 @@ try {
   ]);
 }
 
-await cp(path.join(repositoryRoot, "desktop", "dist"), path.join(outputRoot, "ui"), {
-  recursive: true,
-});
+await cp(
+  path.join(repositoryRoot, "desktop", "dist"),
+  path.join(outputRoot, "ui"),
+  {
+    recursive: true,
+  },
+);
 await copyFile(
   path.join(repositoryRoot, "LICENSE"),
   path.join(outputRoot, "LICENSE"),
@@ -129,7 +136,9 @@ const packageMetadata = JSON.parse(
   await readFile(path.join(repositoryRoot, "desktop", "package.json"), "utf8"),
 ) as { readonly version?: unknown };
 const version =
-  typeof packageMetadata.version === "string" ? packageMetadata.version : "0.0.0";
+  typeof packageMetadata.version === "string"
+    ? packageMetadata.version
+    : "0.0.0";
 await writeFile(
   path.join(outputRoot, "PACKAGE.json"),
   `${JSON.stringify(
@@ -182,7 +191,9 @@ function assertSafeOutput(output: string): void {
 
 function safeSegment(value: string): string {
   if (!/^[A-Za-z0-9._-]{1,80}$/.test(value)) {
-    throw new Error("platform must contain only letters, digits, dot, dash, or underscore");
+    throw new Error(
+      "platform must contain only letters, digits, dot, dash, or underscore",
+    );
   }
   return value;
 }
@@ -196,7 +207,9 @@ async function checksumTree(
   for (const file of files.sort()) {
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (relative === "SHA256SUMS") continue;
-    const digest = createHash("sha256").update(await readFile(file)).digest("hex");
+    const digest = createHash("sha256")
+      .update(await readFile(file))
+      .digest("hex");
     output.push({ digest, relative });
   }
   return output;
@@ -213,9 +226,35 @@ async function walk(directory: string, files: string[]): Promise<void> {
   }
 }
 
+/**
+ * Resolve how to invoke a tool without a shell, so no argument ever passes
+ * through shell quoting.
+ *
+ * On Windows `pnpm` is a `.cmd` shim, which `spawn` cannot execute directly.
+ * When this script is itself run by pnpm, `npm_execpath` points at pnpm's own
+ * JavaScript entry, which the current Node can execute on every platform; that
+ * is preferred because it also guarantees the same pnpm version. Otherwise fall
+ * back to naming the platform's shim.
+ */
+function resolveInvocation(
+  command: string,
+  args: readonly string[],
+): { command: string; args: readonly string[] } {
+  if (command !== "pnpm") return { args, command };
+  const execPath = process.env.npm_execpath;
+  if (execPath && /\.[cm]?js$/i.test(execPath)) {
+    return { args: [execPath, ...args], command: process.execPath };
+  }
+  return {
+    args,
+    command: process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+  };
+}
+
 async function run(command: string, args: readonly string[]): Promise<void> {
+  const invocation = resolveInvocation(command, args);
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn(invocation.command, invocation.args, {
       cwd: repositoryRoot,
       env: { ...process.env, CI: "true" },
       stdio: "inherit",

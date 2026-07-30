@@ -8,8 +8,6 @@ from pathlib import Path
 import pytest
 from harbor.environments.base import ExecResult
 
-from harbor_buzz_orchestra.manifest import ExperimentManifest
-from harbor_buzz_orchestra.provisioning import AgentCredential, TrialHandle
 from harbor_buzz_orchestra.container_runtime import (
     REMOTE_BIN,
     REMOTE_LOGS,
@@ -17,6 +15,8 @@ from harbor_buzz_orchestra.container_runtime import (
     EndpointLaunchConfig,
     RuntimeLaunchError,
 )
+from harbor_buzz_orchestra.manifest import ExperimentManifest
+from harbor_buzz_orchestra.provisioning import AgentCredential, TrialHandle
 
 
 def write_manifest(tmp_path: Path) -> ExperimentManifest:

@@ -13,8 +13,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "check": "tsc -p tsconfig.json --noEmit && vitest run",
+    "build": "pnpm --filter @buzz/core build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && tsc -p tsconfig.json --noEmit && vitest run",
     "test": "vitest run src"
   },
   "dependencies": {
