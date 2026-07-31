@@ -230,11 +230,12 @@ async function walk(directory: string, files: string[]): Promise<void> {
  * Resolve how to invoke a tool without a shell, so no argument ever passes
  * through shell quoting.
  *
- * On Windows `pnpm` is a `.cmd` shim, which `spawn` cannot execute directly.
- * When this script is itself run by pnpm, `npm_execpath` points at pnpm's own
- * JavaScript entry, which the current Node can execute on every platform; that
- * is preferred because it also guarantees the same pnpm version. Otherwise fall
- * back to naming the platform's shim.
+ * On Windows `pnpm` is a `.cmd` shim, which `spawn` cannot execute directly —
+ * that is what fails the packaging job with `spawn pnpm ENOENT`. When pnpm ran
+ * this script it exports `npm_execpath`, which is preferred in either shape it
+ * takes because it pins the very same pnpm rather than trusting PATH:
+ * a JavaScript entry runs under the current Node, and a standalone binary is
+ * spawnable as-is. Only without it do we fall back to naming the shim.
  */
 function resolveInvocation(
   command: string,
@@ -242,8 +243,10 @@ function resolveInvocation(
 ): { command: string; args: readonly string[] } {
   if (command !== "pnpm") return { args, command };
   const execPath = process.env.npm_execpath;
-  if (execPath && /\.[cm]?js$/i.test(execPath)) {
-    return { args: [execPath, ...args], command: process.execPath };
+  if (execPath) {
+    return /\.[cm]?js$/i.test(execPath)
+      ? { args: [execPath, ...args], command: process.execPath }
+      : { args, command: execPath };
   }
   return {
     args,

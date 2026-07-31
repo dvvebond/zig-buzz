@@ -14,7 +14,7 @@
     "package:desktop:archive": "node --experimental-strip-types scripts/package-desktop.mts --archive",
     "relay": "pnpm --filter @buzz/relay build && pnpm --filter @buzz/relay start",
     "test": "./scripts/run-tests.sh unit",
-    "test:typescript": "pnpm --filter './packages/**' --filter './apps/**' --filter './examples/**' test"
+    "test:typescript": "pnpm build:typescript && pnpm --filter './packages/**' --filter './apps/**' --filter './examples/**' test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
