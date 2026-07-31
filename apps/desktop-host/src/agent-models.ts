@@ -1,4 +1,4 @@
-import { access, realpath, stat } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -856,7 +856,10 @@ async function findExecutable(command: string): Promise<string | null> {
     try {
       await access(candidate, process.platform === "win32" ? 0 : 1);
       if (!(await stat(candidate)).isFile()) continue;
-      return await realpath(candidate);
+      // Deliberately not resolved through realpath: multi-call launchers such
+      // as Hermit, asdf, and Volta dispatch on argv[0], so collapsing the
+      // symlink would run the launcher itself instead of the tool.
+      return path.resolve(candidate);
     } catch {
       // Continue through the caller-controlled, bounded candidate list.
     }

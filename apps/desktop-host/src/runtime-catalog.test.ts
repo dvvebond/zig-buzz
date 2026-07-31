@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -125,6 +125,46 @@ describe("RuntimeCatalogService", () => {
       await expect(
         service.probeBackendProvider(process.execPath),
       ).rejects.toThrow(/not a discovered/);
+    } finally {
+      if (previousPath === undefined) delete process.env.PATH;
+      else process.env.PATH = previousPath;
+    }
+  });
+
+  it("runs an adapter install through the npm name a version manager put on PATH", async () => {
+    if (process.platform === "win32") return;
+    // Hermit, asdf, and Volta install multi-call launchers that decide which
+    // tool to run from argv[0]. Resolving `npm` through realpath collapses the
+    // symlink onto the launcher, which then parses npm's own arguments:
+    // `hermit: error: unknown flag --global`.
+    const directory = await mkdtemp(path.join(os.tmpdir(), "buzz-shim-"));
+    const launcher = path.join(directory, "version-manager");
+    await writeFile(
+      launcher,
+      [
+        `#!${process.execPath}`,
+        "const invoked = require('node:path').basename(process.argv[1]);",
+        "if (invoked !== 'npm') {",
+        "  process.stderr.write(`version-manager: error: unknown flag ${process.argv[2] ?? ''}`);",
+        "  process.exit(1);",
+        "}",
+        "process.stdout.write('installed');",
+      ].join("\n"),
+      { mode: 0o700 },
+    );
+    await chmod(launcher, 0o700);
+    await symlink(launcher, path.join(directory, "npm"));
+
+    const previousPath = process.env.PATH;
+    process.env.PATH = directory;
+    try {
+      const service = new RuntimeCatalogService(
+        IdentityService.create(undefined, async () => undefined),
+      );
+      const result = await service.install("claude");
+      const steps = result.steps as Array<Record<string, unknown>>;
+      expect(steps[0]?.stderr).not.toContain("unknown flag");
+      expect(result.success).toBe(true);
     } finally {
       if (previousPath === undefined) delete process.env.PATH;
       else process.env.PATH = previousPath;

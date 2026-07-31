@@ -789,7 +789,12 @@ async function findExecutable(command: string): Promise<string | null> {
       await access(candidate, process.platform === "win32" ? 0 : 1);
       const metadata = await stat(candidate);
       if (!metadata.isFile()) continue;
-      return await realpath(candidate);
+      // Deliberately not resolved through realpath. Version managers install
+      // multi-call launchers — Hermit, asdf, Volta — that dispatch on argv[0],
+      // so collapsing `bin/npm` to `bin/hermit` makes the launcher parse the
+      // tool's own arguments and fail with something like
+      // `hermit: error: unknown flag --global`.
+      return path.resolve(candidate);
     } catch {
       // Continue through the deterministic candidate list.
     }
@@ -826,7 +831,12 @@ async function providerCandidates(): Promise<Map<string, string>> {
     for (const name of names) {
       const match = PROVIDER_BINARY.exec(name);
       if (!match?.[1]) continue;
-      const resolved = await findExecutable(path.join(directory, name));
+      const found = await findExecutable(path.join(directory, name));
+      // Canonicalised deliberately: this map is the allowlist
+      // `probeBackendProvider` checks a caller-supplied path against, so two
+      // names for one binary must collapse to a single entry. `findExecutable`
+      // itself must not canonicalise — see the note there about argv[0].
+      const resolved = found ? await realpath(found).catch(() => found) : null;
       if (resolved && !candidates.has(resolved)) {
         candidates.set(resolved, match[1].toLowerCase());
       }
