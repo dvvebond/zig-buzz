@@ -154,6 +154,12 @@ describe("RuntimeCatalogService", () => {
     );
     await chmod(launcher, 0o700);
     await symlink(launcher, path.join(directory, "npm"));
+    // The underlying CLI has to exist or install() short-circuits on
+    // cli_missing before it ever resolves npm. Its adapter is deliberately
+    // absent so the install actually runs.
+    const claude = path.join(directory, "claude");
+    await writeFile(claude, `#!${process.execPath}\n`, { mode: 0o700 });
+    await chmod(claude, 0o700);
 
     const previousPath = process.env.PATH;
     process.env.PATH = directory;
@@ -163,6 +169,11 @@ describe("RuntimeCatalogService", () => {
       );
       const result = await service.install("claude");
       const steps = result.steps as Array<Record<string, unknown>>;
+      // Assert the npm step ran at all. Without this the test passes on a
+      // machine where the adapter is already installed and install() returns
+      // early with no steps, which is how the argv[0] regression slipped past.
+      expect(steps).toHaveLength(1);
+      expect(steps[0]?.command).toContain("npm install --global");
       expect(steps[0]?.stderr).not.toContain("unknown flag");
       expect(result.success).toBe(true);
     } finally {

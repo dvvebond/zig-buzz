@@ -628,7 +628,10 @@ export class CommandRegistry {
     );
     this.register("is_shared_identity", () => false);
     this.register("get_media_proxy_port", () => 0);
-    this.register("get_baked_build_env", () => ({}));
+    // Both are lists. `get_baked_build_env` returning an object made
+    // AgentConfigFields crash on `bakedEnv.find(...)`, which blanked the whole
+    // onboarding step after the harness page.
+    this.register("get_baked_build_env", () => []);
     this.register("get_baked_build_env_keys", () => []);
     this.register("get_legacy_workspace_storage", () => ({
       activeWorkspaceId: null,
