@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { redactSensitiveText } from "@buzz/remote-agent-protocol";
+
+import { promotableHarnessError } from "./harness-stderr.js";
 import type { EventTemplate } from "@buzz/sdk";
 import {
   finalizeEvent,
@@ -30,6 +32,7 @@ const HEX_PUBKEY = /^[0-9a-f]{64}$/;
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const MAX_LOG_BYTES = 256 * 1024;
 const MAX_LOG_LINES = 2_000;
+const MAX_HARNESS_STDERR_BUFFER = 16 * 1024;
 const STORE_KEY = "managed-agents.v1";
 const RESERVED_ENV = new Set([
   "BUZZ_PRIVATE_KEY",
@@ -596,9 +599,15 @@ export class ManagedAgentService {
         BUZZ_PRIVATE_KEY: nsec,
       },
       shell: false,
-      stdio: ["ignore", log.fd, log.fd],
+      // stderr is piped rather than sent straight to the log so a running agent
+      // whose turns keep failing can surface a reason. Without this, `lastError`
+      // is only ever set when the process fails to spawn or exits, so an agent
+      // that authenticates once and then cannot refresh its session looks
+      // healthy while answering nothing.
+      stdio: ["ignore", log.fd, "pipe"],
       windowsHide: true,
     });
+    this.#forwardHarnessStderr(child, record.pubkey, log);
     const runtimeState: Runtime = {
       child,
       error: null,
@@ -1139,6 +1148,36 @@ export class ManagedAgentService {
       ...record,
       ...patch,
       updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Copy the harness's stderr into its log and keep the newest reported failure
+   * as the agent's `lastError`, so a turn that fails on a live process is
+   * visible in the UI rather than only in a log file on disk.
+   *
+   * The harness prefixes what it wants surfaced with `buzz-acp:` and has already
+   * redacted it; everything else is noise from the underlying CLI and is logged
+   * without being promoted.
+   */
+  #forwardHarnessStderr(
+    child: ChildProcess,
+    pubkey: string,
+    log: { write: (text: string) => Promise<unknown> },
+  ): void {
+    if (!child.stderr) return;
+    let pending = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      void log.write(chunk).catch(() => undefined);
+      pending = `${pending}${chunk}`.slice(-MAX_HARNESS_STDERR_BUFFER);
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) {
+        const message = promotableHarnessError(line);
+        if (!message) continue;
+        void this.#patch(pubkey, { lastError: message }).catch(() => undefined);
+      }
     });
   }
 
