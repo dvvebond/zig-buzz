@@ -106,15 +106,18 @@ test("failed initial relay dial retries automatically", async ({ page }) => {
   await expect
     .poll(
       () =>
-        page.evaluate(() => {
-          const getState = (
-            window as Window & {
-              __BUZZ_E2E_GET_RELAY_CONNECTION_STATE__?: () => string;
-            }
-          ).__BUZZ_E2E_GET_RELAY_CONNECTION_STATE__;
-          if (!getState) throw new Error("Relay state seam is not installed.");
-          return getState();
-        }),
+        // The seam is installed by the bundle, so it can still be absent on the
+        // first poll of a fresh page. Report that as a state to keep waiting on
+        // rather than throwing, which ends the poll on a startup race instead of
+        // on the connection never recovering.
+        page.evaluate(
+          () =>
+            (
+              window as Window & {
+                __BUZZ_E2E_GET_RELAY_CONNECTION_STATE__?: () => string;
+              }
+            ).__BUZZ_E2E_GET_RELAY_CONNECTION_STATE__?.() ?? "uninstalled",
+        ),
       { timeout: 10_000 },
     )
     .toBe("connected");

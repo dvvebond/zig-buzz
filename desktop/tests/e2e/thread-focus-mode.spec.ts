@@ -30,17 +30,62 @@ async function seedLongThread(page: import("@playwright/test").Page) {
   });
 }
 
+/**
+ * The topmost message a reader can actually read.
+ *
+ * A row is only an anchor once at least one text line of it is on screen.
+ * Accepting a row that merely grazes the top edge made the reading-context
+ * assertions flaky: the layout switch rebuilds the thread in a pane of a
+ * different height, and a row with a single visible pixel lands just above the
+ * fold, which `toBeInViewport` reports as ratio 0.
+ */
+const MIN_ANCHOR_VISIBLE_PX = 24;
+
+/**
+ * Wait until the thread body is genuinely scrollable and has stopped moving.
+ *
+ * Replies stream in and wrap, so both the content height and the app's own
+ * scroll-to-latest keep changing for a few frames after the panel appears.
+ * Scrolling before that settles is a no-op that quietly invalidates any
+ * reading-position assertion made afterwards.
+ */
+async function settleThreadScroll(
+  body: import("@playwright/test").Locator,
+): Promise<void> {
+  await expect
+    .poll(() =>
+      body.evaluate(
+        (element) => element.scrollHeight - element.clientHeight > 200,
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(async () => {
+      const first = await body.evaluate((element) => element.scrollTop);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const second = await body.evaluate((element) => element.scrollTop);
+      return first === second;
+    })
+    .toBe(true);
+}
+
 async function topVisibleMessageId(
   body: import("@playwright/test").Locator,
 ): Promise<string> {
-  return body.evaluate((element) => {
-    const top = element.getBoundingClientRect().top;
+  return body.evaluate((element, minimumVisible) => {
+    const viewport = element.getBoundingClientRect();
     const row = Array.from(
       element.querySelectorAll<HTMLElement>("[data-message-id]"),
-    ).find((candidate) => candidate.getBoundingClientRect().bottom > top);
+    ).find((candidate) => {
+      const bounds = candidate.getBoundingClientRect();
+      const visible =
+        Math.min(bounds.bottom, viewport.bottom) -
+        Math.max(bounds.top, viewport.top);
+      return visible >= Math.min(minimumVisible, bounds.height);
+    });
     if (!row?.dataset.messageId) throw new Error("No visible thread anchor");
     return row.dataset.messageId;
-  });
+  }, MIN_ANCHOR_VISIBLE_PX);
 }
 
 /**
@@ -181,10 +226,19 @@ test("focus and split preserve reading context and interaction ownership", async
     .toBe(true);
   await expect(channel).toHaveAttribute("inert", "");
 
+  // The replies are still being laid out when the drawer first paints, and
+  // until they are the body's scrollHeight equals its clientHeight — assigning
+  // scrollTop then silently clamps to 0, so the test would carry the very first
+  // message forward as its "reading position" and assert it survived a switch
+  // it was never scrolled away from.
+  await settleThreadScroll(body);
   await body.evaluate((element) => {
     element.scrollTop = element.scrollHeight * 0.4;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
+  await expect
+    .poll(() => body.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
   const anchorId = await topVisibleMessageId(body);
 
   const focusModeToggle = page.getByRole("button", {
