@@ -52,6 +52,12 @@ type HarnessDefinition = {
 
 export type RuntimeDefinition = HarnessDefinition & {
   adapterPackage?: string;
+  /**
+   * Arguments that ask the underlying CLI whether it is signed in. Absent when
+   * the CLI has no such command, in which case authentication is reported as
+   * not applicable rather than unknown.
+   */
+  authProbeArgs?: readonly string[];
   avatarUrl: string;
   commands: string[];
   mcpCommand: string | null;
@@ -118,6 +124,7 @@ const BUILT_INS: readonly RuntimeDefinition[] = [
   {
     adapterPackage: "@agentclientprotocol/claude-agent-acp",
     args: [],
+    authProbeArgs: ["auth", "status"],
     avatarUrl:
       "https://raw.githubusercontent.com/anthropics/claude-code/main/assets/claude-code-logo.png",
     command: "claude-agent-acp",
@@ -138,6 +145,7 @@ const BUILT_INS: readonly RuntimeDefinition[] = [
   {
     adapterPackage: "@agentclientprotocol/codex-acp",
     args: [],
+    authProbeArgs: ["login", "status"],
     avatarUrl: "https://developers.openai.com/favicon.ico",
     command: "codex-acp",
     commands: ["codex-acp"],
@@ -591,8 +599,10 @@ export class RuntimeCatalogService {
       (await findExecutable("npm")) !== null;
     return {
       auth_status:
-        definition.underlyingCli && availability === "available"
-          ? { status: "unknown" }
+        definition.authProbeArgs &&
+        underlyingPath &&
+        availability === "available"
+          ? await probeAuthStatus(underlyingPath, definition.authProbeArgs)
           : { status: "not_applicable" },
       availability,
       avatar_url: definition.avatarUrl,
@@ -843,6 +853,50 @@ async function providerCandidates(): Promise<Map<string, string>> {
     }
   }
   return candidates;
+}
+
+/**
+ * Signals a CLI emits when it cannot parse its own config file. Both must be
+ * present, so an unrelated error that happens to mention one of them is not
+ * mistaken for a broken config. Codex reports, for example:
+ * `Error loading configuration: ~/.codex/config.toml: unknown variant ...`
+ */
+const CONFIG_PARSE_SIGNALS = [
+  "error loading configuration",
+  "unknown variant",
+] as const;
+
+/**
+ * Ask the underlying CLI whether it is signed in.
+ *
+ * A clean exit means signed in. A failing exit is only reported as a broken
+ * config when the CLI says so; otherwise it is simply signed out, which is an
+ * ordinary state the card offers to fix. Anything that stops the probe from
+ * running at all is also treated as signed out, because an unreachable CLI
+ * cannot be authenticated.
+ */
+async function probeAuthStatus(
+  binaryPath: string,
+  args: readonly string[],
+): Promise<AuthStatus> {
+  let result: { exitCode: number | null; stderr: string };
+  try {
+    result = await runBounded(binaryPath, args, {
+      stdin: null,
+      timeoutMs: 15_000,
+    });
+  } catch {
+    return { status: "logged_out" };
+  }
+  if (result.exitCode === 0) return { status: "logged_in" };
+  const stderr = result.stderr.toLowerCase();
+  if (CONFIG_PARSE_SIGNALS.every((signal) => stderr.includes(signal))) {
+    return {
+      diagnostic: result.stderr.trim().split("\n")[0] ?? "",
+      status: "config_invalid",
+    };
+  }
+  return { status: "logged_out" };
 }
 
 async function runBounded(

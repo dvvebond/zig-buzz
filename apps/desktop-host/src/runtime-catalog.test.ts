@@ -170,4 +170,59 @@ describe("RuntimeCatalogService", () => {
       else process.env.PATH = previousPath;
     }
   });
+
+  it("reports authentication from the underlying CLI instead of always unknown", async () => {
+    if (process.platform === "win32") return;
+    // `codex login status` decides the card's state. Reporting "unknown" without
+    // asking left the card stuck on "Couldn't verify authentication", with
+    // nothing for Check again to change.
+    const cases = [
+      { expected: { status: "logged_in" }, exit: 0, stderr: "" },
+      {
+        expected: { status: "logged_out" },
+        exit: 1,
+        stderr: "Not logged in",
+      },
+      {
+        expected: {
+          diagnostic: "Error loading configuration: unknown variant `x`",
+          status: "config_invalid",
+        },
+        exit: 1,
+        stderr: "Error loading configuration: unknown variant `x`",
+      },
+    ] as const;
+
+    for (const scenario of cases) {
+      const directory = await mkdtemp(path.join(os.tmpdir(), "buzz-auth-"));
+      for (const name of ["codex", "codex-acp"]) {
+        const file = path.join(directory, name);
+        await writeFile(
+          file,
+          [
+            `#!${process.execPath}`,
+            `process.stderr.write(${JSON.stringify(scenario.stderr)});`,
+            `process.exit(${scenario.exit});`,
+          ].join("\n"),
+          { mode: 0o700 },
+        );
+        await chmod(file, 0o700);
+      }
+      const previousPath = process.env.PATH;
+      process.env.PATH = directory;
+      try {
+        const service = new RuntimeCatalogService(
+          IdentityService.create(undefined, async () => undefined),
+        );
+        const codex = (await service.discover()).find(
+          (entry) => entry.id === "codex",
+        );
+        expect(codex?.availability).toBe("available");
+        expect(codex?.auth_status).toEqual(scenario.expected);
+      } finally {
+        if (previousPath === undefined) delete process.env.PATH;
+        else process.env.PATH = previousPath;
+      }
+    }
+  });
 });
