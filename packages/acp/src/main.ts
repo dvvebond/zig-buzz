@@ -5,6 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import { basename } from "node:path";
 import WebSocket from "ws";
 
+import { parseArguments } from "./cli-args.js";
 import { AcpHarness, type RespondTo } from "./harness.js";
 
 const args = parseArguments(process.argv.slice(2));
@@ -124,24 +125,6 @@ const stop = (): void => {
 };
 process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
-
-function parseArguments(values: string[]): Map<string, string> {
-  const parsed = new Map<string, string>();
-  for (let index = 0; index < values.length; index += 1) {
-    const current = values[index];
-    if (!current?.startsWith("--")) {
-      throw new Error(`unexpected argument ${current ?? ""}`);
-    }
-    const name = current.slice(2);
-    const value = values[index + 1];
-    if (!value || value.startsWith("--")) {
-      throw new Error(`missing value for --${name}`);
-    }
-    parsed.set(name, value);
-    index += 1;
-  }
-  return parsed;
-}
 
 function flag(
   values: ReadonlyMap<string, string>,
