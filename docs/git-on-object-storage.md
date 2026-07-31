@@ -470,37 +470,27 @@ transfer:
   hydrate + run receive-pack, and the CAS losers' work is discarded (an
   accepted v1 tradeoff named in §Scope).
 
-**Current code status (verified provenance).** The full S3-CAS implementation
-exists in code at PR #726's tip (`crates/buzz-relay/src/api/git/`), with the
-relay lib green, clippy `--tests -D warnings` clean, fmt clean, and the live
-MinIO e2e — clone/push/fetch/force-push roundtrip + N-way concurrent-push
-no-fork — green on the assembled tip. (Line numbers below are pinned at
-landing time; reviewers checking after subsequent refactors should consult
-symbol search, not line counts.)
+**Current code status.** The S3-CAS implementation is TypeScript in
+`apps/relay/src/git-store.ts`, `git-repository.ts`, and `git-http.ts`. The
+relay test suite includes live smart-HTTP clone/push/fetch and concurrent
+writer coverage. Reviewers should use symbol search because implementation
+line numbers are intentionally not part of this specification.
 
 | Spec element | Code |
 |---|---|
-| `Manifest { version, head, refs, packs, parent }` + `canonical_bytes` | `manifest.rs` |
-| `Manifest::validate()` (pre-CAS rejection: refs/HEAD/OIDs/parent-shape) | `manifest.rs` |
-| `GitStore::{put_pack, put_manifest, put_pointer}` (create-only + CAS) | `store.rs` |
-| `run_conformance_probe` (A1/A3 fail-closed startup gate) | `store.rs` + `main.rs` |
-| `hydrate_for_read` / `hydrate_for_write` | `hydrate.rs` |
-| Bounded digest-keyed pack/index cache and single-flight population | `pack_cache.rs` |
-| Proactive full-closure pack compaction before manifest capacity | `cas_publish.rs` |
-| `ParentState { if_match, parent_digest, parent }` + `from_loaded`/`fresh` | `cas_publish.rs:154` |
-| `cas_publish(.., &parent_state) -> Result<CasSuccess, CasError>` | `cas_publish.rs:410` |
-| `CasError::Conflict { winner_manifest, winner_manifest_key }` (typed 412) | `cas_publish.rs:92` |
-| `build_ref_state_event(&RefStateInputs, &Keys)` (NIP-34 kind:30618) | `manifest_event.rs` |
-| `PushContext { pack, parent_state, repo_handle, … }` | `transport.rs:643` |
-| `finalize_push(state, ctx) -> Response` — **the seam** | `transport.rs:674` |
-| `build_git_response` (sole `Body::from(stdout)` site) | `transport.rs:627` |
+| Immutable packs/manifests and conditional pointer writes | `git-store.ts` |
+| File, memory, and S3 object-store implementations | `git-store.ts` |
+| Hydration, publication, bounded Git subprocesses, and CAS retry | `git-repository.ts` |
+| NIP-98 authentication and smart-HTTP request bounds | `git-http.ts` + `nip98.ts` |
+| NIP-34 ref-state publication | `git-http.ts` |
+| Ref protection and signed receive-pack policy | `git-policy.ts` |
+| Clone/push/fetch and concurrent-writer regression coverage | `git-http.e2e.test.ts` |
 
-The push path reaches `build_git_response` *only* through `finalize_push`,
-which consumes a `PushContext`; the compiler enforces "no `PushContext` ⇒ no
-push `Response`." Read paths reach `build_git_response` independently after
-hydrating the published state via `hydrate_for_read` — pointer-absent → 404,
-any below-pointer failure → 5xx, never a synthesized empty repo (A1
-detectability holds in the read direction too). The 404 invariant is
+The push path reaches the HTTP response only after `RelayGitHttp` has completed
+receive-pack validation and publication. Read paths respond only after
+`hydrateRepository` loads the published state — pointer-absent → 404, any
+below-pointer failure → 5xx, never a synthesized empty repo (A1 detectability
+holds in the read direction too). The 404 invariant is
 unambiguous because kind:30617 announce seeds an empty-manifest pointer
 *before* the announcement event is published: an announced repo is always
 cloneable (empty refs, but a valid pointer), and pointer-absence means "never

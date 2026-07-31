@@ -476,10 +476,9 @@ rule Relay_Accepts_NIP43_MemberList:
 // Independent per-community audit chains
 // ============================================================================
 //
-// Target shape, not today's implementation: current `buzz-audit` has one global
-// chain (`buzz-audit/src/service.rs` reads the latest global hash). Multi-tenant
-// safety requires N independent community-labeled heads so the spec's
-// Implementation Correspondence section can track replacing the global chain.
+// The implementation correspondence is `packages/audit/src/service.ts`, where
+// every append and head lookup is scoped by community_id. Multi-tenant safety
+// requires N independent community-labeled heads.
 
 rule Append_Audit:
   [ AuditHead(comm, prev), Fr(~seq), Fr(~entry) ]

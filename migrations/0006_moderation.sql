@@ -2,8 +2,7 @@
 --
 -- Design: PLANS/COMMUNITY_MODERATION_PLAN.md §0 (decisions locked by Tyler,
 -- 2026-07-07). All three tables are tenant-scoped: community_id NOT NULL and
--- community-id-leading keys, per the tenant-isolation lints in
--- crates/buzz-db/src/migration.rs. Report/ban targets are only ever resolved
+-- community-id-leading keys, per the tenant-isolation schema tests. Report/ban targets are only ever resolved
 -- under the requesting TenantContext — no global lookups (MOD invariants,
 -- docs/spec/MultiTenantRelay.tla).
 

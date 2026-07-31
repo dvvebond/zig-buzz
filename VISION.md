@@ -78,7 +78,7 @@ New message type? New kind integer. Zero breaking changes.
 
 ## Architecture
 
-Rust backend, TypeScript/React clients. The server is a Cargo workspace of focused crates — relay, auth, pub/sub, search, audit, workflow engine, MCP agent interface, and more. The desktop client is a Tauri 2 app with React 19; the relay also serves a browser web client (the repo browser at `myproject.com`). See [README.md](README.md) for the full crate map.
+TypeScript end to end. The pnpm workspace contains focused packages for the relay, auth, pub/sub, search, audit, workflows, agents, and clients. The desktop uses a loopback-only TypeScript host with React 19, the mobile client uses Expo/React Native, and the relay also serves the browser client. See [README.md](README.md) for the complete workspace map.
 
 ---
 
@@ -214,7 +214,7 @@ Greenfield. Agent swarms build in parallel, integrating at the event store bound
 | ✅ | Core relay, auth, pub/sub, search, audit |
 | ✅ | MCP server — full feature surface |
 | ✅ | ACP agent harness — goose, codex, claude code |
-| ✅ | Desktop client (Tauri) — Stream, Home, Forum, DMs, Agents, Workflows, Search, Settings, Profiles, Presence |
+| ✅ | Desktop client (TypeScript host) — Stream, Home, Forum, DMs, Agents, Workflows, Search, Settings, Profiles, Presence |
 | ✅ | Channel features — messaging, threads, reactions, canvases, media uploads, editing, deletion, typing indicators, NIP-29, soft-delete |
 | ✅ | Workflow engine — YAML-as-code, execution traces, message/reaction/schedule/webhook triggers |
 | ✅ | Identity — NIP-05, public profiles, NIP-98 auth, agent protection |
@@ -223,8 +223,9 @@ Greenfield. Agent swarms build in parallel, integrating at the event store bound
 | 🚧 | Workflow approval gates — infrastructure exists (DB, API, UI); executor doesn't persist/resume (WF-08) |
 | ✅ | Huddles — WebSocket Opus voice relay + lifecycle events (recording/tracks planned) |
 | ✅ | Buzz Mesh — relay-gated shared AI compute (mesh-llm over iroh); members pool GPUs, agents consume via a local OpenAI-compatible endpoint |
-| 🚧 | Mobile client — Flutter app (channels, forum, search, profile, pairing); in active development |
-| 📋 | Developer portal, push notifications, culture features |
+| ✅ | Mobile client — Expo/React Native app with channels, forum, search, profile, pairing, inbox, media, drafts, and offline outbox |
+| ✅ | Push notifications and operator portal |
+| 📋 | Culture features |
 
 ---
 

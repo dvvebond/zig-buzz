@@ -1,28 +1,47 @@
 name: buzz-prod
 
 services:
+  migrate:
+    image: ${BUZZ_IMAGE:-ghcr.io/block/buzz:main}
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-buzz}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-buzz}
+    entrypoint: ["/usr/local/bin/buzz-admin"]
+    command: ["migrate", "--directory", "/srv/buzz/migrations"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - buzz-net
+
   relay:
     image: ${BUZZ_IMAGE:-ghcr.io/block/buzz:main}
-    env_file:
-      - .env
     environment:
-      BUZZ_BIND_ADDR: 0.0.0.0:3000
-      BUZZ_HEALTH_PORT: "8080"
-      BUZZ_METRICS_PORT: "9102"
+      BUZZ_HOST: 0.0.0.0
+      BUZZ_PORT: "3000"
+      BUZZ_PUBLIC_URL: ${RELAY_URL:?set RELAY_URL}
+      BUZZ_MEDIA_PUBLIC_BASE_URL: ${BUZZ_MEDIA_BASE_URL:?set BUZZ_MEDIA_BASE_URL}
+      BUZZ_CORS_ORIGINS: ${BUZZ_CORS_ORIGINS:-}
+      BUZZ_REQUIRE_RELAY_MEMBERSHIP: ${BUZZ_REQUIRE_RELAY_MEMBERSHIP:-true}
+      BUZZ_REQUIRE_MEDIA_GET_AUTH: ${BUZZ_REQUIRE_MEDIA_GET_AUTH:-true}
+      BUZZ_OWNER_PUBKEYS: ${RELAY_OWNER_PUBKEY:?set RELAY_OWNER_PUBKEY}
+      BUZZ_RELAY_PRIVATE_KEY: ${BUZZ_RELAY_PRIVATE_KEY:?set BUZZ_RELAY_PRIVATE_KEY}
+      BUZZ_GIT_HOOK_HMAC_SECRET: ${BUZZ_GIT_HOOK_HMAC_SECRET:?set BUZZ_GIT_HOOK_HMAC_SECRET}
       DATABASE_URL: postgres://${POSTGRES_USER:-buzz}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-buzz}
-      REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
+      BUZZ_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
       BUZZ_S3_ENDPOINT: http://minio:9000
       BUZZ_S3_ACCESS_KEY: ${BUZZ_S3_ACCESS_KEY:?set BUZZ_S3_ACCESS_KEY}
       BUZZ_S3_SECRET_KEY: ${BUZZ_S3_SECRET_KEY:?set BUZZ_S3_SECRET_KEY}
       BUZZ_S3_BUCKET: ${BUZZ_S3_BUCKET:-buzz-media}
+      BUZZ_S3_FORCE_PATH_STYLE: "true"
       BUZZ_GIT_REPO_PATH: /data/git
-      BUZZ_AUTO_MIGRATE: ${BUZZ_AUTO_MIGRATE:-false}
-      BUZZ_GIT_CONFORMANCE_PROBE: ${BUZZ_GIT_CONFORMANCE_PROBE:-true}
     ports:
       - "${BUZZ_HTTP_PORT:-3000}:3000"
     volumes:
       - buzz-git-data:/data/git
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -31,13 +50,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-    # Probe /_readiness over /dev/tcp because the runtime image has bash but no curl/wget/socat.
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /_readiness HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'",
-        ]
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:3000/_readiness"]
       interval: 10s
       timeout: 3s
       retries: 12

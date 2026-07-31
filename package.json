@@ -1,12 +1,28 @@
 {
   "name": "buzz-workspace",
   "private": true,
-  "packageManager": "pnpm@11.4.0",
+  "packageManager": "pnpm@11.18.0",
   "scripts": {
-    "check": "pnpm -r check"
+    "build:typescript": "pnpm --filter './packages/**' --filter './apps/**' --filter './examples/**' build",
+    "build": "pnpm build:typescript && pnpm -C desktop build && pnpm -C web build && pnpm -C admin-web build",
+    "check": "pnpm check:build-order && pnpm -r check",
+    "check:build-order": "node scripts/check-build-order.mjs",
+    "desktop": "pnpm -C desktop desktop",
+    "format": "pnpm exec biome format --write apps packages examples",
+    "format:check": "pnpm exec biome format apps packages examples",
+    "package:desktop": "node --experimental-strip-types scripts/package-desktop.mts --archive",
+    "package:desktop:archive": "node --experimental-strip-types scripts/package-desktop.mts --archive",
+    "relay": "pnpm --filter @buzz/relay build && pnpm --filter @buzz/relay start",
+    "test": "./scripts/run-tests.sh unit",
+    "test:typescript": "pnpm build:typescript && pnpm --filter './packages/**' --filter './apps/**' --filter './examples/**' test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6"
+    "@biomejs/biome": "^2.4.6",
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.27.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19"

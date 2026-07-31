@@ -1,9 +1,22 @@
 packages:
+  - "apps/*"
+  - "packages/*"
+  - "examples/*"
   - "desktop"
   - "web"
   - "admin-web"
+injectWorkspacePackages: true
 allowBuilds:
+  cbor-extract: false
   esbuild: true
+  sharp: true
+# Production Docker images intentionally install server-only workspace slices.
+# Their dependency graph does not include the desktop-only `virtua` patch, so
+# pnpm must allow that patch to be unused for filtered installs. Full workspace
+# installs still resolve and verify every declared patch.
+allowUnusedPatches: true
+minimumReleaseAgeExclude:
+  - openai@7.0.0
 overrides:
   # Force a single copy of the dismissable-layer. Radix packages otherwise
   # resolve different versions (react-menu pulled 1.1.11, react-dialog 1.1.15),

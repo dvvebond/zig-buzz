@@ -2,9 +2,9 @@
 
 Each provisioned identity is a full ``buzz-acp`` → ``buzz-agent`` →
 ``buzz-dev-mcp`` process tree launched *inside* the task container — the same
-binaries and the same MCP toolset (shell, file tools, the ``buzz`` CLI on
+TypeScript runtime and the same MCP toolset (shell, file tools, the ``buzz`` CLI on
 PATH) that the desktop app gives a Buzz agent. The harness stays outside:
-it provisions, uploads the pinned binaries, posts the task as the trial
+it provisions, uploads the pinned bundles, posts the task as the trial
 user, and observes the channel until the orchestrator publishes DONE.
 """
 
@@ -23,7 +23,6 @@ from harbor.environments.base import BaseEnvironment
 from .manifest import AgentClass, ExperimentManifest
 from .provisioning import AgentCredential, TrialHandle
 from .runtime import RuntimeResult
-
 
 DEFAULT_MAX_AGENT_ROUNDS = 32
 # Container-side layout for the uploaded Buzz stack.
@@ -88,7 +87,7 @@ class BuzzContainerRuntime:
         self.logs_dir = Path(logs_dir)
         self.artifact_root = Path(artifact_root)
         self.endpoints = endpoints
-        # Linux builds uploaded into the task container:
+        # Executable TypeScript bundles uploaded into the task container:
         self.buzz_acp_binary = buzz_acp_binary
         self.buzz_agent_binary = buzz_agent_binary
         self.buzz_dev_mcp_binary = buzz_dev_mcp_binary
@@ -183,7 +182,7 @@ class BuzzContainerRuntime:
     # -- container setup ------------------------------------------------------
 
     async def _install_stack(self, environment: BaseEnvironment) -> None:
-        """Upload the pinned Linux binaries into the task container."""
+        """Verify Node.js and upload the pinned TypeScript bundles."""
         uploads = {
             f"{REMOTE_BIN}/buzz-acp": self.buzz_acp_binary,
             f"{REMOTE_BIN}/buzz-agent": self.buzz_agent_binary,
@@ -201,6 +200,15 @@ class BuzzContainerRuntime:
             raise RuntimeLaunchError(
                 f"cannot create {REMOTE_ROOT} in the task container: "
                 f"{result.stderr or result.stdout}"
+            )
+        node_check = await environment.exec(
+            "command -v node >/dev/null 2>&1 && "
+            "node -e 'const m=Number(process.versions.node.split(\".\")[0]);"
+            "if(m<22)process.exit(1)'"
+        )
+        if node_check.return_code != 0:
+            raise RuntimeLaunchError(
+                "the task container must provide Node.js 22 or newer"
             )
         for target, source in uploads.items():
             await environment.upload_file(source, target)
@@ -468,7 +476,7 @@ class BuzzContainerRuntime:
             await environment.exec(sweep)
             await asyncio.sleep(2)
             await environment.exec(sweep.replace("-TERM", "-KILL"))
-        except Exception:  # noqa: BLE001 — environment may already be gone
+        except Exception:  # noqa: BLE001, S110 — environment may already be gone
             pass
 
     async def _collect_logs(
@@ -476,7 +484,7 @@ class BuzzContainerRuntime:
     ) -> None:
         try:
             await environment.download_dir(REMOTE_LOGS, trial_dir)
-        except Exception:  # noqa: BLE001 — best effort; env may be torn down
+        except Exception:  # noqa: BLE001, S110 — best effort; env may be torn down
             pass
 
     # -- Buzz CLI as the trial user / provisioning identities -------------------
@@ -614,9 +622,11 @@ class BuzzContainerRuntime:
             "",
             f"You are `{credential.agent_id}` (pubkey `{credential.nostr_pubkey}`).",
             f"The team coordinates in Buzz channel `{trial.channel_id}`.",
-            f"Tasks come from the user `{trial.user.agent_id}` "
-            f"(pubkey `{trial.user.nostr_pubkey}`); address your final report "
-            "to them.",
+            (
+                f"Tasks come from the user `{trial.user.agent_id}` "
+                f"(pubkey `{trial.user.nostr_pubkey}`); address your final "
+                "report to them."
+            ),
             "",
             "| Name | Role | Pubkey |",
             "|------|------|--------|",

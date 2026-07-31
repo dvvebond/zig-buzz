@@ -1,5 +1,6 @@
 import type { BackendIntent } from "../lib/instanceInputForDefinition";
 import type { BackendProviderProbeResult } from "@/shared/api/types";
+import type { OwnerConnectionEvent } from "@buzz/remote-agent-client";
 import { coerceConfigValues } from "./ProviderConfigFields";
 
 /** Draft state of the optional remote-backend selector. */
@@ -7,16 +8,30 @@ export type WhereToRunDraft = {
   runOn: "local" | string;
   providerConfig: Record<string, string>;
   probedProvider: BackendProviderProbeResult | null;
+  remote: {
+    enrollmentId: string;
+    expiresAt: number;
+    setupCommand: string;
+    workerPubkey?: string;
+    workerName?: string;
+    enrollment?: Extract<
+      OwnerConnectionEvent,
+      { type: "enrollment" }
+    >["payload"];
+    ready: boolean;
+  } | null;
 };
 
 export const emptyWhereToRunDraft: WhereToRunDraft = {
   runOn: "local",
   providerConfig: {},
   probedProvider: null,
+  remote: null,
 };
 
 export function providerConfigComplete(draft: WhereToRunDraft): boolean {
   if (draft.runOn === "local") return true;
+  if (draft.runOn === "remote-server") return draft.remote?.ready === true;
   if (!draft.probedProvider) return false;
   const schema = draft.probedProvider.config_schema as
     | Record<string, unknown>
@@ -35,6 +50,18 @@ export function resolveBackendIntent(
   draft: WhereToRunDraft,
 ): BackendIntent | null {
   if (draft.runOn === "local") return null;
+  if (
+    draft.runOn === "remote-server" &&
+    draft.remote?.ready &&
+    draft.remote.workerPubkey
+  ) {
+    return {
+      type: "remote",
+      deploymentId: draft.remote.enrollmentId,
+      workerPubkey: draft.remote.workerPubkey,
+    };
+  }
+  if (draft.runOn === "remote-server") return null;
   return {
     type: "provider",
     id: draft.runOn,

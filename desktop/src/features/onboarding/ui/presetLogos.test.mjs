@@ -1,49 +1,33 @@
 /**
  * Preset-logo coverage guard.
  *
- * Every tier-2 preset the backend emits must have a bundled logo, or it renders
+ * Every tier-2 preset the desktop host emits must have a bundled logo, or it renders
  * as the generic TerminalSquare fallback next to siblings that show real marks.
- * The two sides live in different languages — Rust `PRESET_HARNESSES` vs the TS
- * `PRESET_LOGOS` record — so no compiler catches drift, and `RuntimeIcon`'s
- * `onError` fallback hides a missing file at runtime. This test reads the Rust
- * source as text (the same trick `motion.test.mjs` uses for CSS) and asserts
- * both directions plus on-disk existence of every mapped file.
+ * The host and UI are separate packages, so this asserts both directions plus
+ * on-disk existence of every mapped file.
  */
 
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { RUNTIME_MARKS } from "./HarnessMarks.tsx";
 import { PRESET_LOGOS } from "./RuntimeIcon.tsx";
+import { PRESET_RUNTIME_IDS } from "../../../../../apps/desktop-host/src/runtime-presets.ts";
 
 const desktopRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
 
-const discoveryRs = readFileSync(
-  path.join(desktopRoot, "src-tauri/src/managed_agents/discovery.rs"),
-  "utf8",
-);
+const presetIds = [...PRESET_RUNTIME_IDS];
 
-const presetBlock = discoveryRs.match(
-  /const PRESET_HARNESSES: &\[PresetHarness\] = &\[([\s\S]*?)\n\];/,
-);
-assert.ok(presetBlock, "could not locate PRESET_HARNESSES in discovery.rs");
-
-const presetIds = [...presetBlock[1].matchAll(/^\s{8}id: "([^"]+)",$/gm)].map(
-  (match) => match[1],
-);
-
-test("PRESET_HARNESSES parse found the preset ids", () => {
-  // Guards the regex itself: a struct-field rename would otherwise silently
-  // yield zero ids and make every assertion below vacuously pass.
+test("desktop host exports the expected preset roster", () => {
   assert.ok(
     presetIds.length >= 8,
-    `expected at least 8 preset ids, parsed ${presetIds.length}`,
+    `expected at least 8 preset ids, received ${presetIds.length}`,
   );
 });
 

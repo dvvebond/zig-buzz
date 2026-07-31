@@ -55,7 +55,7 @@ When you create a branch, Buzz creates a channel. The branch's patches, review c
 ├── 🧑 alice: "Starting OAuth2 PKCE implementation"
 ├── 🤖 ci-agent: "Build triggered — commit a1b2c3d"
 ├── 🤖 ci-agent: "✅ All 47 tests pass (12.3s)"
-├── 📎 kind:1617 patch — src/auth/pkce.rs (+120 lines)
+├── 📎 kind:1617 patch — src/auth/pkce.ts (+120 lines)
 ├── 🧑 bob: "One nit on error handling line 45"
 ├── 📎 kind:1617 patch v2 — addressed review
 ├── 🤖 review-agent: "LGTM — error variants match trait spec"

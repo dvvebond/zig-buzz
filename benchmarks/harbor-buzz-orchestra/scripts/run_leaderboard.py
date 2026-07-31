@@ -17,7 +17,7 @@ importable:
         --manifest benchmarks/harbor-buzz-orchestra/manifests/<TEAM>.yaml \
         --endpoint-config benchmarks/harbor-buzz-orchestra/testbed/endpoints/<ENDPOINTS>.json \
         --provisioner-config <PROVISIONER.json> \
-        --agent-bin-dir <DIR with Linux buzz-acp/buzz-agent/buzz-dev-mcp>
+        --agent-bin-dir <DIR with bundled buzz-acp/buzz-agent/buzz-dev-mcp>
 """
 
 from __future__ import annotations
@@ -37,8 +37,8 @@ AGENT_IMPORT = "harbor_buzz_orchestra:BuzzOrchestraAgent"
 PROVISIONER_FACTORY = "harbor_buzz_testbed:provisioner_from_dict"
 # Host-side: the harness speaks to the relay as the trial user via this CLI.
 BINARIES = ("buzz",)
-# Container-side: the production stack uploaded into each task container.
-# These must be Linux builds matching the task image architecture.
+# Container-side: executable TypeScript bundles uploaded into each task
+# container. Task images must provide Node.js 22 or newer.
 AGENT_BINARIES = ("buzz-acp", "buzz-agent", "buzz-dev-mcp")
 # Uploaded alongside the stack when --relay-gateway is set: bridges the
 # agents' canonical relay address to the host gateway (the relay is
@@ -82,11 +82,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--buzz-bin-dir", type=Path, default=None,
-        help="Directory with the host buzz CLI (default: repo target/release, then target/debug)",
+        help="Directory with the bundled host buzz CLI "
+        "(default: benchmark .benchmark/typescript-bin)",
     )
     parser.add_argument(
         "--agent-bin-dir", type=Path, required=True,
-        help="Directory with Linux builds of buzz-acp/buzz-agent/buzz-dev-mcp "
+        help="Directory with executable TypeScript bundles of "
+        "buzz-acp/buzz-agent/buzz-dev-mcp "
         "to upload into each task container",
     )
     parser.add_argument(
@@ -110,7 +112,7 @@ def find_binaries(bin_dir: Path | None) -> dict[str, Path]:
     candidates = (
         [bin_dir]
         if bin_dir is not None
-        else [PACKAGE_ROOT.parents[1] / "target" / kind for kind in ("release", "debug")]
+        else [PACKAGE_ROOT / ".benchmark" / "typescript-bin"]
     )
     for candidate in candidates:
         found = {name: candidate / name for name in BINARIES}
@@ -119,20 +121,19 @@ def find_binaries(bin_dir: Path | None) -> dict[str, Path]:
     searched = ", ".join(str(c) for c in candidates)
     raise SystemExit(
         f"buzz binaries not found (need {', '.join(BINARIES)}; searched {searched}). "
-        "Build them with `cargo build` or pass --buzz-bin-dir."
+        "Build them with `just benchmark` or pass --buzz-bin-dir."
     )
 
 
 def find_agent_binaries(bin_dir: Path, with_forwarder: bool = False) -> dict[str, Path]:
-    """The Linux agent stack uploaded into each task container."""
+    """The TypeScript agent stack uploaded into each task container."""
     names = AGENT_BINARIES + ((FORWARDER_BINARY,) if with_forwarder else ())
     found = {name: bin_dir / name for name in names}
     missing = [name for name, path in found.items() if not path.is_file()]
     if missing:
         raise SystemExit(
-            f"Linux agent binaries not found in {bin_dir}: {', '.join(missing)}. "
-            "`just benchmark` builds them; or cross-compile with "
-            "cargo --target <arch>-unknown-linux-musl and pass --agent-bin-dir."
+            f"TypeScript agent bundles not found in {bin_dir}: {', '.join(missing)}. "
+            "`just benchmark` builds them; or pass --agent-bin-dir."
         )
     return found
 
@@ -231,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dry_run:
         # Dry runs print the command without requiring built binaries.
-        bin_dir = args.buzz_bin_dir or PACKAGE_ROOT.parents[1] / "target" / "release"
+        bin_dir = args.buzz_bin_dir or PACKAGE_ROOT / ".benchmark" / "typescript-bin"
         binaries = {name: bin_dir / name for name in BINARIES}
         agent_binaries = {
             name: args.agent_bin_dir / name
@@ -250,7 +251,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{PACKAGE_ROOT / 'testbed'} {Path(__file__).resolve()} ..."
         )
 
-    result = subprocess.run(command)
+    # The exit code is inspected below so the job directory can be reported.
+    result = subprocess.run(command, check=False)
     job_dir = args.jobs_dir / args.job_name
     if result.returncode != 0:
         print(f"harbor run failed (exit {result.returncode}); job dir: {job_dir}")

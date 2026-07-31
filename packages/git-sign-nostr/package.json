@@ -1,0 +1,29 @@
+{
+  "name": "@buzz/git-sign-nostr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "git-sign-nostr": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.0.1",
+    "nostr-tools": "^2.23.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

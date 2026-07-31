@@ -1,0 +1,32 @@
+{
+  "name": "@buzz/pair-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-pair-relay": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/relay.d.ts",
+      "import": "./dist/relay.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

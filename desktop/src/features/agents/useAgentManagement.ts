@@ -22,6 +22,7 @@ import {
   buildInstanceInputForDefinition,
   type BackendIntent,
 } from "./lib/instanceInputForDefinition";
+import { deployRemoteAgent } from "./remote/remoteAgentController";
 import { useCreatedAgentChannelAttachment } from "./useCreatedAgentChannelAttachment";
 import { classifyAgentManagementOrigin } from "./agentManagementBuffer";
 import { useChannelsQuery } from "@/features/channels/hooks";
@@ -205,6 +206,23 @@ export function useAgentManagement() {
       });
 
       if (intent === "definition_start") {
+        if (backendIntent?.type === "remote") {
+          const remote = await deployRemoteAgent({
+            deploymentId: backendIntent.deploymentId,
+            persona,
+            runtime,
+            workerPubkey: backendIntent.workerPubkey,
+          });
+          const targetChannel = (channelsQuery.data ?? []).find(
+            (channel) => channel.id === request.request.channelId,
+          );
+          setError(
+            `${remote.name} is running remotely. Add ${remote.agentPubkey} to #${targetChannel?.name ?? "this channel"} if it is not already a member.`,
+          );
+          await queryClient.invalidateQueries({ queryKey: personasQueryKey });
+          dismiss();
+          return true;
+        }
         const created = await createAgentMutation.mutateAsync(
           await buildInstanceInputForDefinition(
             persona,

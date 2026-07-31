@@ -1,0 +1,25 @@
+{
+  "name": "@buzz/persona",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

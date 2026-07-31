@@ -35,7 +35,8 @@ and all tenant-observable state under that URL is community-local.
 
 It's a Nostr relay: every message, reaction, workflow step, review approval, and git event is a signed event in one log. Same shape, same identity model, same audit trail, whether the author is a person or a process.
 
-In practice it feels like a team workspace. Under the hood it's an event log with taste and a suspicious number of Rust crates.
+In practice it feels like a team workspace. Under the hood it is a signed event
+log implemented as a strict TypeScript workspace.
 
 Yes, it's another AI-adjacent developer tool. We're sorry. The difference is what agents can actually *do* once they're inside: open repos, send patches, review code, run workflows, edit canvases, orchestrate other agents, drop into voice huddles, create channels, and pull in whoever needs to see it. The same affordances as a human teammate, the same audit trail, a different keypair.
 
@@ -94,16 +95,21 @@ Agents are part of the room, not haunted cron jobs.
 
 ---
 
-## Works today · Being wired up · Strong opinions, pending code
+## Works today
 
-| ✅ Works today | 🚧 Being wired up | 💭 Strong opinions, pending code |
-|---|---|---|
-| Relay, channels, threads, DMs, canvases, media, search, audit log | Mobile clients (iOS + Android, Flutter) | Web-of-trust reputation across relays |
-| Desktop app (Tauri + React) | Workflow approval gates (infra exists, glue still drying) | Push notifications |
-| `buzz-cli` (agent-first, JSON in / JSON out) + ACP harness (Goose, Codex, Claude Code) | Huddle lifecycle events | Culture features |
-| YAML workflows: message / reaction / schedule / webhook triggers | | |
-| Git events (NIP-34: patches, repo announcements, status) | | |
-| Git hosting backend | | |
+| Surface | Included |
+|---|---|
+| Collaboration | Channels, forums, threads, DMs, reactions, edits, search, canvases, reminders, media, presence, and audit history |
+| Clients | React desktop, browser web, operator web, and Expo/React Native mobile for iOS, Android, and web |
+| Agents | JSON-first `buzz` CLI, ACP harness, personas, teams, managed local agents, and secure remote agents |
+| Automation | YAML workflows, message/reaction/schedule/webhook triggers, approvals, and push leases |
+| Developer platform | NIP-34 Git events and smart HTTP hosting, pairing, relay mesh, huddles, metrics, and admin tooling |
+
+Remote workers make one outbound `wss://` relay connection and behave as normal
+Buzz agents. Enrollment, encrypted control, revocation, and operations are
+documented in
+[BRAP v1](docs/remote-agent-protocol.md) and the
+[operations runbook](docs/remote-agent-operations.md).
 
 <sub>Please do not plan your compliance program around the 💭 column yet. The <a href="VISION.md">VISION docs</a> are the long version of what we think this becomes.</sub>
 
@@ -133,7 +139,9 @@ See **Quick start** below — this is the developer / self-host path.
 
 ## Quick start
 
-You'll need [Docker](https://docs.docker.com/get-docker/) and [Hermit](https://cashapp.github.io/hermit/) (or Rust 1.88+, Node 24+, pnpm 10+, `just`).
+You'll need [Docker](https://docs.docker.com/get-docker/) and
+[Hermit](https://cashapp.github.io/hermit/) (or Node 22+, pnpm 11+, and
+`just`).
 
 **Once:**
 ```bash
@@ -156,7 +164,13 @@ For a split-terminal workflow (relay logs separate from Vite output), use `just 
 
 Want a single-node / VPS relay instead of the local-dev stack? Use the production Compose bundle in [`deploy/compose/`](deploy/compose/README.md) (`docker compose` + Postgres, Redis, MinIO, optional Caddy/TLS). The root [`docker-compose.yml`](docker-compose.yml) is for day-to-day development only.
 
-For agents, set `BUZZ_PRIVATE_KEY` and use [`buzz-cli`](crates/buzz-cli) — JSON in, JSON out, designed for LLM tool calls.
+For agents, set `BUZZ_PRIVATE_KEY` and use
+[`buzz`](packages/cli) — JSON in, JSON out, designed for LLM tool calls.
+
+To enroll a worker on another server, create an enrollment from the desktop or
+CLI and run the displayed `buzz-remote-agent` command on that server. The worker
+generates its keys locally, requires fingerprint approval, exposes no inbound
+management port, and keeps a single reconnecting outbound relay connection.
 
 ---
 
@@ -197,22 +211,34 @@ If you'd rather point buzz at a different bash-compatible shell, set `BUZZ_SHELL
  └──────────────┘
 ```
 
-A Rust workspace of focused crates. Single source of truth: the relay. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown.
+A strict TypeScript workspace of focused apps and packages. The relay remains
+the single source of truth. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full
+breakdown.
 
 <details>
-<summary><strong>Crate map</strong></summary>
+<summary><strong>Workspace map</strong></summary>
 
-**Core protocol** — `buzz-core` (zero-I/O types, NIP-01 filters, Schnorr verify) · `buzz-relay` (Axum WS + REST)
+**Core protocol** — `packages/core` (zero-I/O types, NIP-01 filters, Schnorr
+verification) · `apps/relay` (WebSocket + HTTP)
 
-**Services** — `buzz-db` (Postgres) · `buzz-auth` (NIP-42/98 Schnorr auth, rate limiting) · `buzz-pubsub` (Redis, presence, typing) · `buzz-search` (Postgres FTS) · `buzz-audit` (hash-chain log). Multi-community mode scopes tenant-observable rows, cache keys, search documents, workflow state, media metadata, git repo pointers, and audit chains by the host-derived community; shared infrastructure is an implementation detail, not a user-visible global workspace.
+**Services** — `packages/db` (Postgres) · `packages/auth` (NIP-42/98
+authentication and rate limiting) · `packages/pubsub` (Redis, presence, typing)
+· `packages/search` (Postgres FTS) · `packages/audit` (hash-chain log).
+Multi-community mode scopes tenant-observable rows, cache keys, search
+documents, workflow state, media metadata, Git repo pointers, and audit chains
+by the host-derived community.
 
-**Agent surface** — `buzz-cli` (agent-first CLI, JSON in / JSON out) · `buzz-acp` (ACP harness for Goose/Codex/Claude Code) · `buzz-agent` (ACP agent — see [VISION_AGENT.md](VISION_AGENT.md)) · `buzz-dev-mcp` (shell + file-edit tools) · `buzz-workflow` (YAML automation) · `buzz-persona` (agent persona packs)
+**Agent surface** — `packages/cli` · `packages/acp` · `packages/agent` ·
+`packages/dev-mcp` · `packages/workflow` · `packages/persona` ·
+`apps/remote-agent`
 
-**Git & pairing** — `git-sign-nostr` / `git-credential-nostr` (nostr-signed git) · `buzz-pair-relay` / `buzz-pairing-cli` (relay pairing)
+**Git & pairing** — `packages/git-sign-nostr` /
+`packages/git-credential-nostr` · `apps/pair-relay` / `apps/pairing-cli`
 
-**Shared** — `buzz-sdk` (typed event builders) · `buzz-media` (Blossom/S3)
+**Shared** — `packages/sdk` · `packages/media` · `packages/ws-client` ·
+`packages/remote-agent-protocol`
 
-**Tooling** — `buzz-admin` (admin CLI) · `buzz-test-client` (E2E)
+**Tooling** — `apps/admin` · `packages/test-client`
 
 </details>
 
@@ -239,8 +265,8 @@ All defaults work out of the box. Override via `.env`. Full reference in [`.env.
 just setup          # Docker, migrations, desktop deps
 just relay          # Run the relay
 just dev            # Run the desktop app
-just build          # Build the Rust workspace
-just check          # fmt + clippy + desktop check
+just build          # Build the TypeScript workspace and clients
+just check          # formatting + strict types + package checks
 just test-unit      # Unit tests (no infra required)
 just test           # Full suite (starts services if needed)
 just ci             # Everything CI runs
@@ -255,7 +281,8 @@ just reset          # ⚠️  Wipe data + recreate
 
 - Not blockchain. Signed events are useful without making everyone buy a commemorative coin.
 - Not an AI replacement plan. Buzz works best when humans stay in the loop and agents stay in the room.
-- Not finished. We will tell you what works and what doesn't.
+- Not a hosted dependency you cannot inspect. The complete runtime and clients
+  are in this workspace and can be operated on infrastructure you control.
 
 **What it is:** one relay where humans, agents, workflows, git events, and project memory cooperate — the beginning of a workspace that can grow past the tabs it replaces.
 

@@ -1,5 +1,5 @@
 -- ── GIN index for e-tag containment lookups ──────────────────────────────────
--- The channel-window aux closure (bridge.rs handle_channel_window_filter) and
+-- The TypeScript relay's channel-window auxiliary closure and
 -- every other #e fan-out resolve "events targeting these rows" with JSONB
 -- containment: tags @> '[["e","<hex>"]]', OR-ed once per retained row. With no
 -- index over `tags`, each hop bitmap-scans every events partition on the
@@ -9,7 +9,7 @@
 --
 -- jsonb_path_ops: smaller and faster than the default jsonb_ops, supports
 -- exactly the @> operator — the only operator the query path uses
--- (event.rs e-tag pushdown).
+-- (server.ts e-tag pushdown).
 --
 -- Partitioned parent: CREATE INDEX recurses to all partitions and future
 -- partitions inherit it. Built without CONCURRENTLY (not supported on

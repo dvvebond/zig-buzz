@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Buzz",
+    "slug": "buzz-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/buzz-icon.png",
+    "scheme": "buzz",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.buzz.buzzMobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Buzz uses the camera to scan secure pairing codes and attach media.",
+        "NSMicrophoneUsageDescription": "Buzz uses the microphone when recording message media."
+      }
+    },
+    "android": {
+      "package": "xyz.block.buzz.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/buzz-foreground.png",
+        "backgroundColor": "#111419"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "buzz"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/buzz-icon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Buzz to scan secure pairing codes and capture message media."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Buzz to choose images and videos to share."
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-document-picker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#111419",
+          "image": "./assets/images/buzz-foreground.png",
+          "imageWidth": 220
+        }
+      ]
+    ],
+    "extra": {
+      "relayUrl": ""
+    }
+  }
+}

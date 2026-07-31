@@ -1,0 +1,30 @@
+{
+  "name": "@buzz/workflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*",
+    "cron-parser": "^5.6.2",
+    "nostr-tools": "^2.23.3",
+    "pg": "^8.16.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

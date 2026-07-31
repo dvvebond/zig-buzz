@@ -72,7 +72,7 @@ def compute_auth_tag(
 ) -> str:
     """Compute the NIP-OA ``["auth", ...]`` tag authorising an agent key.
 
-    Mirrors crates/buzz-sdk/src/nip_oa.rs:
+    Mirrors packages/sdk/src/nip-oa.ts:
     sig = schnorr(SHA256("nostr:agent-auth:" || agent_pubkey || ":" || conditions),
     owner_secret_key). Returns the tag as a JSON string.
     """

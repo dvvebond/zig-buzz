@@ -58,9 +58,13 @@ The unit tests pin the default 1/2/4-pod 64× contract and include a mutant row 
 
 ## Code provenance
 
-The scoped Redis channel format corresponds to `buzz_pubsub::EventTopicKey::redis_channel()` in `crates/buzz-pubsub/src/topic.rs`:
+The scoped Redis channel format corresponds to `channelForCommunity()` in
+`packages/pubsub/src/event-bus.ts`:
 
-- global: `buzz:{community_id}:global`
-- channel: `buzz:{community_id}:channel:{channel_id}`
+- community events: `buzz:events:{community_host}`
+- connection control: `buzz:{community_id}:conn-control`
 
-`retain_topic` / `release_topic` drive dynamic local Redis `SUBSCRIBE` interest. This harness measures that bus-bound property only. Live relay latency, DB capacity, and client rendering should be measured separately with a full stack because they include unrelated bottlenecks.
+The event bus subscribes once per locally active community. This harness
+measures that bus-bound property only. Live relay latency, DB capacity, and
+client rendering should be measured separately with a full stack because they
+include unrelated bottlenecks.

@@ -1,0 +1,37 @@
+{
+  "name": "@buzz/desktop-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-desktop": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/media build && pnpm --filter @buzz/core build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/git-credential-nostr build && pnpm --filter @buzz/pairing build && pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/workflow build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/media build && pnpm --filter @buzz/core build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/acp build && pnpm --filter @buzz/agent build && pnpm --filter @buzz/git-credential-nostr build && pnpm --filter @buzz/pairing build && pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/workflow build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/acp": "workspace:*",
+    "@buzz/agent": "workspace:*",
+    "@buzz/core": "workspace:*",
+    "@buzz/git-credential-nostr": "workspace:*",
+    "@buzz/media": "workspace:*",
+    "@buzz/pairing": "workspace:*",
+    "@buzz/remote-agent-protocol": "workspace:*",
+    "@buzz/sdk": "workspace:*",
+    "@buzz/workflow": "workspace:*",
+    "@noble/curves": "^2.0.1",
+    "nostr-tools": "^2.23.3",
+    "file-type": "^21.0.0",
+    "sharp": "^0.34.3",
+    "ws": "^8.18.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

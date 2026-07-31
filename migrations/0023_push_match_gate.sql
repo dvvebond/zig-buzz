@@ -11,7 +11,7 @@
 --     no retry. Closed with a per-community advisory lock held to transaction
 --     end: event inserts take the lock SHARED (concurrent with each other),
 --     lease transitions that can make eligibility true take it EXCLUSIVE
---     (crates/buzz-db/src/push.rs: accept_lease_event and replace_lease).
+--     (`apps/relay/src/push-lease.ts`).
 --     The conflict forces a total order: either the event's check sees the
 --     committed lease, or the activation strictly follows the event's commit —
 --     in which case no lease existed when the event was accepted and no wake

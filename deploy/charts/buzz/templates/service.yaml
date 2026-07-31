@@ -15,5 +15,5 @@ spec:
     {{- include "buzz.relaySelectorLabels" . | nindent 4 }}
   ports:
     - { name: app,     port: {{ .Values.service.port }},        targetPort: app,     protocol: TCP }
-    - { name: health,  port: {{ .Values.service.healthPort }},  targetPort: health,  protocol: TCP }
-    - { name: metrics, port: {{ .Values.service.metricsPort }}, targetPort: metrics, protocol: TCP }
+    - { name: health,  port: {{ .Values.service.healthPort }},  targetPort: app, protocol: TCP }
+    - { name: metrics, port: {{ .Values.service.metricsPort }}, targetPort: app, protocol: TCP }

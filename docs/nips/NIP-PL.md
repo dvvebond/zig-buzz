@@ -411,7 +411,15 @@ The gateway performs one APNs request, except that an APNs expired-provider-toke
 
 ## Implementation Notes (Buzz, non-normative)
 
-Per `RESEARCH/PUSH_RELAY_INTEGRATION.md` (pinned SHA `88c089d`): the lease matcher hooks the generic post-storage dispatch seam (`buzz-relay/src/handlers/event.rs:245 dispatch_persistent_event`), not `handle_side_effects`; Redis pub/sub is community-scoped routing precedent but not the durable offline-matching source; `event_mentions` is a ready indexed primitive for self-`#p` and needs-action subscriptions but is **not** authorization — private-channel wakes re-check same-community visibility at match/send time. Known footgun: some internal producers bypass `dispatch_persistent_event`; implementation must centralize durable dispatch or add push dispatch at each internal publish path.
+The TypeScript relay persists eligible events into `push_match_queue` through
+the database trigger in `migrations/0023_push_match_gate.sql`; the tenant-scoped
+matcher and delivery loops live in `apps/relay/src/push-runtime.ts`. Redis
+pub/sub is community-scoped routing precedent but not the durable
+offline-matching source. `event_mentions` is a ready indexed primitive for
+self-`#p` and needs-action subscriptions but is **not** authorization:
+private-channel wakes re-check same-community visibility at match/send time.
+Internal producers that bypass normal event persistence must enqueue through
+the bounded API in `apps/relay/src/push-lease.ts`.
 
 ## Privacy Considerations
 

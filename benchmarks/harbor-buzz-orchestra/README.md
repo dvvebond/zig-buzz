@@ -43,14 +43,16 @@ one task (`-p`), a directory of tasks, or replace `-p` with Harbor's dataset and
 task selectors:
 
 ```bash
-uv run --project benchmarks/harbor-buzz-orchestra/testbed harbor run --yes -p <TASK_OR_DIRECTORY> --agent harbor_buzz_orchestra:BuzzOrchestraAgent --agent-kwarg manifest=<CONDITION.yaml> --agent-kwarg provisioner_factory=harbor_buzz_testbed:provisioner_from_dict --agent-kwarg provisioner_config=<PROVISIONER.json> --agent-kwarg endpoint_config=<ENDPOINTS.json> --agent-kwarg artifact_root=benchmarks/harbor-buzz-orchestra --agent-kwarg buzz_acp_binary=<LINUX_BIN>/buzz-acp --agent-kwarg buzz_agent_binary=<LINUX_BIN>/buzz-agent --agent-kwarg buzz_dev_mcp_binary=<LINUX_BIN>/buzz-dev-mcp --agent-kwarg buzz_cli_binary=target/debug/buzz --agent-kwarg run_id="bench-$(date -u +%Y%m%dT%H%M%SZ)" --agent-timeout-multiplier 15 --n-concurrent 1
+uv run --project benchmarks/harbor-buzz-orchestra/testbed harbor run --yes -p <TASK_OR_DIRECTORY> --agent harbor_buzz_orchestra:BuzzOrchestraAgent --agent-kwarg manifest=<CONDITION.yaml> --agent-kwarg provisioner_factory=harbor_buzz_testbed:provisioner_from_dict --agent-kwarg provisioner_config=<PROVISIONER.json> --agent-kwarg endpoint_config=<ENDPOINTS.json> --agent-kwarg artifact_root=benchmarks/harbor-buzz-orchestra --agent-kwarg buzz_acp_binary=<TS_BIN>/buzz-acp --agent-kwarg buzz_agent_binary=<TS_BIN>/buzz-agent --agent-kwarg buzz_dev_mcp_binary=<TS_BIN>/buzz-dev-mcp --agent-kwarg buzz_cli_binary=<TS_BIN>/buzz --agent-kwarg run_id="bench-$(date -u +%Y%m%dT%H%M%SZ)" --agent-timeout-multiplier 15 --n-concurrent 1
 ```
 
-`buzz_acp_binary`/`buzz_agent_binary`/`buzz_dev_mcp_binary` must be **Linux**
-builds matching the task image architecture — they are uploaded into each task
-container (`just benchmark` cross-builds them automatically; musl-static, so
-any Linux base image works). `buzz_cli_binary` is the **host** CLI the harness
-uses to act as the trial user.
+`buzz_acp_binary`/`buzz_agent_binary`/`buzz_dev_mcp_binary` are executable,
+platform-neutral TypeScript bundles uploaded into each task container.
+`just benchmark` builds them automatically into
+`.benchmark/typescript-bin`. Task images must provide Node.js 22 or newer;
+the runtime checks that requirement before launching an agent.
+`buzz_cli_binary` is the host bundle the harness uses to act as the trial
+user.
 
 `--n-concurrent 1` is the safe laptop setting for a serialized local model; it
 is not an orchestration requirement. Some TB graders install dependencies from
@@ -86,8 +88,8 @@ message mid-trial would taint the run. `just benchmark-down` stops the stack.
 
 Networking: the relay is host-header tenant-bound, so agents must dial its
 canonical address (`ws://localhost:3600`) even from inside a task container.
-`just benchmark` uploads a tiny std-only loopback forwarder
-([`forwarder/relay_forwarder.rs`](forwarder/relay_forwarder.rs)) with the
+`just benchmark` uploads a tiny dependency-free TypeScript loopback forwarder
+([`forwarder/relay-forwarder.ts`](forwarder/relay-forwarder.ts)) with the
 agent stack; it listens on the container's loopback and bridges the byte
 stream to the Docker host gateway (`host.docker.internal`, overridable via
 `BUZZ_BENCHMARK_DOCKER_HOST`).

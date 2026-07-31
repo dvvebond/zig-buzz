@@ -1,0 +1,38 @@
+{
+  "name": "@buzz/cli",
+  "version": "0.4.26",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz": "./dist/main.js",
+    "buzz-ts": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/commands.d.ts",
+      "import": "./dist/commands.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/remote-agent-protocol build && pnpm --filter @buzz/core build && pnpm --filter @buzz/persona build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && pnpm --filter @buzz/remote-agent-client build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.0.1",
+    "@buzz/core": "workspace:*",
+    "@buzz/persona": "workspace:*",
+    "@buzz/remote-agent-client": "workspace:*",
+    "@buzz/remote-agent-protocol": "workspace:*",
+    "@buzz/sdk": "workspace:*",
+    "@buzz/ws-client": "workspace:*",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

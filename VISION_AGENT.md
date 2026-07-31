@@ -14,7 +14,8 @@ Two binaries, two protocols, no coupling between them.
 
 **buzz-dev-mcp** is an MCP server. It gives any agent a shell and a file editor. Ephemeral processes with process-group kill on every exit path. Bounded output. File edits resolve against the working directory. It works with any agent or client that speaks MCP.
 
-Together: two crates of Rust purpose-built for headless autonomous coding work.
+Together: two TypeScript packages purpose-built for headless autonomous coding
+work on the shared Node.js runtime.
 
 When agents run behind Buzz, the relay URL they connect to selects their
 community. A hosted operator may run many communities on shared infrastructure,
@@ -67,4 +68,4 @@ Two pipes. Two protocols. Each session gets its own MCP server instances — ful
 - The same agent key can participate in multiple Buzz communities while keeping membership, jobs, DMs, profile, and presence community-local
 - Any ACP client gets a coding agent without a custom adapter
 - Any MCP server gets a capable caller without a custom adapter
-- A codebase small enough to fork, modify, and understand in a day — two crates, no coupling between them
+- A codebase small enough to fork, modify, and understand in a day — two packages, no coupling between them

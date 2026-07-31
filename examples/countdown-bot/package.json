@@ -1,0 +1,30 @@
+{
+  "name": "@buzz/example-countdown-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-countdown-bot": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @buzz/core build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && tsc -p tsconfig.build.json",
+    "check": "pnpm --filter @buzz/core build && pnpm --filter @buzz/sdk build && pnpm --filter @buzz/ws-client build && tsc -p tsconfig.json --noEmit && vitest run src",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@buzz/core": "workspace:*",
+    "@buzz/sdk": "workspace:*",
+    "@buzz/ws-client": "workspace:*",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "nostr-tools": "^2.23.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

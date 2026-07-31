@@ -1,0 +1,28 @@
+{
+  "name": "@buzz/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "nostr-tools": "^2.23.3"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

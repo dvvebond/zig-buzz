@@ -364,9 +364,7 @@ else
     fail "Poster bare-hash Content-Type should be image/jpeg, got: $POSTER_BARE_CT"
 fi
 
-# Note: Full imeta image validation (accept/reject at message send time) is
-# covered by Rust unit tests: test_imeta_image_poster_frame_accepted,
-# test_imeta_image_video_url_rejected, test_imeta_image_thumbnail_url_rejected.
+# Full imeta validation is also covered by the TypeScript relay/media tests.
 echo ""
 
 # ── Summary ───────────────────────────────────────────────────────────────────

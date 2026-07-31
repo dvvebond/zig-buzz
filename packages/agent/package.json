@@ -1,0 +1,32 @@
+{
+  "name": "@buzz/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-agent": "./dist/main.js",
+    "buzz-agent-ts": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cli": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
+    "start": "node dist/main.js",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.3.0",
+    "openai": "7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

@@ -53,12 +53,12 @@ REST endpoints authenticate via
 the client signs a `kind:27235` event containing the request URL and method.
 The relay verifies the Schnorr signature and extracts the pubkey.
 
-### Authorization — Channel Membership as the Gate
+### Authorization — Membership, Roles, and Capabilities
 
-Channel membership is the **only** access control mechanism. There are no
-separate ACL lists or capability taxonomies. If a principal (human or agent)
-is a member of a channel, they can read and write to it. If they are not a
-member, the relay rejects their requests — even if they are authenticated.
+Channel membership is the primary collaboration boundary. Roles control
+administration and moderation, owner attestations bind managed identities, and
+narrow capabilities govern operational surfaces such as remote-agent control.
+Authentication alone never grants access.
 
 Private channels are invisible to non-members: they do not appear in channel
 listings, and subscription filters for private channel events return nothing
@@ -73,24 +73,27 @@ accidental corruption or single-row edits, but an attacker with database write
 access can recompute the entire chain after editing. The audit log is designed
 for SOX-grade compliance and eDiscovery.
 
-### Desktop Secret Storage — OS Keyring
+### Desktop and Worker Secret Storage
 
-The Buzz desktop app stores nsec private keys in the operating system keyring
-rather than in plaintext files: macOS Keychain, Windows Credential Manager, or
-the Linux Secret Service (`gnome-keyring` / `kwallet` via D-Bus). This covers
-both the human identity key and every managed-agent key.
+The desktop host and remote worker keep private keys in their secure local
+store. Filesystem fallback is owner-only and encrypted; identity and provider
+secrets are never exposed to the React client, relay, status payloads, or
+ordinary logs. Mobile keys use Expo SecureStore.
 
-On first launch after upgrading, existing plaintext keys are migrated into the
-keyring: the key is imported, read back to verify the round-trip, and only then
-is the plaintext deleted. Migration runs only when the keyring is reachable —
-if the backend is unavailable that session, the app keeps reading from the
-plaintext file and does **not** migrate, so a transient outage cannot resurrect
-a rotated key from a leftover file.
+Remote deployments accept named local secret references such as
+`env://ANTHROPIC_API_KEY`, never raw provider credentials in a management
+command. Worker and per-deployment agent keys are generated on the worker and
+are not exportable.
 
-When no keyring backend is available (headless Linux with no Secret Service, for
-example), keys fall back to a `0o600` owner-only file. The `BUZZ_PRIVATE_KEY`
-environment variable, when set, always takes precedence over both stores — this
-is how harnessed agents and CI receive their identity.
+### Remote Agent Control
+
+BRAP v1 uses one outbound `wss://` connection from the worker to the ordinary
+relay. It combines NIP-42 transport authentication with signed NIP-44 v2
+control frames, one-time hashed enrollment, explicit fingerprint approval,
+relay pinning, strict recipient/session/sequence/expiry binding, replay
+rejection, capability-scoped commands, revocation, and a local kill switch.
+There is no generic remote shell command or inbound worker listener. See
+[`docs/remote-agent-protocol.md`](docs/remote-agent-protocol.md).
 
 ### Input Validation
 
@@ -100,21 +103,22 @@ is how harnessed agents and CI receive their identity.
   resolved and checked against a blocklist of private/loopback address ranges
   before the request is made.
 - Workflow response bodies are size-limited to prevent memory exhaustion.
-- `evalexpr` condition evaluation is sandboxed and timeout-bounded.
+- Workflow condition evaluation uses an explicit function environment and
+  bounded execution.
 - Query parameters passed to external URLs are percent-encoded to prevent
   injection.
 
 ### Transport Security
 
-All production deployments should terminate TLS at the relay or a reverse
-proxy in front of it. The relay itself does not enforce TLS — this is
-intentional to allow flexible deployment behind load balancers and ingress
-controllers.
+All production deployments must terminate TLS at the relay or a trusted reverse
+proxy. Clients and remote workers reject insecure non-loopback relay URLs.
 
 ### Dependency Management
 
-We use `cargo audit` in CI to scan for known vulnerabilities in dependencies.
-`#![deny(unsafe_code)]` is enforced across all crates — no unsafe Rust.
+The lockfile is immutable in CI, Renovate isolates dependency changes, GitHub
+dependency review checks pull requests, and the workspace runs package audits
+and secret scanning. Production containers install only their filtered pnpm
+dependency graph and run as an unprivileged user.
 
 ---
 

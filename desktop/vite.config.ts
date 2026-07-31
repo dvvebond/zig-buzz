@@ -3,8 +3,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
-// @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+// @ts-expect-error process is a Node.js global
+const host = process.env.BUZZ_DESKTOP_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -29,11 +29,9 @@ export default defineConfig(async () => ({
     },
   },
 
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent Vite from obscuring rust errors
+  // Keep local desktop development deterministic and compatible with remote
+  // HMR when BUZZ_DESKTOP_DEV_HOST is explicitly configured.
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: parseInt(process.env.VITE_PORT || "1420", 10),
     strictPort: true,
@@ -45,9 +43,5 @@ export default defineConfig(async () => ({
           port: parseInt(process.env.VITE_HMR_PORT || "1421", 10),
         }
       : undefined,
-    watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
-    },
   },
 }));

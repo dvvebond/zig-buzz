@@ -102,9 +102,8 @@ def community_id(index: int) -> str:
 
 
 def scoped_global_channel(community: str) -> str:
-    # Mirrors crates/buzz-pubsub/src/topic.rs EventTopic::Global:
-    # format!("buzz:{}:global", self.community_id)
-    return f"{BUZZ_PREFIX}:{community}:global"
+    # Mirrors packages/pubsub/src/event-bus.ts channelForCommunity().
+    return f"{BUZZ_PREFIX}:events:{community}"
 
 
 def encode_command(*parts: object) -> bytes:

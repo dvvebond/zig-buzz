@@ -1,0 +1,29 @@
+{
+  "name": "@buzz/dev-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "buzz-dev-mcp": "./dist/main.js",
+    "buzz-dev-mcp-ts": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json --noEmit && vitest run src",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "jimp": "^1.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.1"
+  }
+}

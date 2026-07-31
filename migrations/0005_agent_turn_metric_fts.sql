@@ -14,10 +14,9 @@
 --   44100  = KIND_MEMBER_ADDED_NOTIFICATION  (p-gated membership notice)
 --   44101  = KIND_MEMBER_REMOVED_NOTIFICATION (p-gated membership notice)
 --   44200  = KIND_AGENT_TURN_METRIC          (NIP-AM: p-gated encrypted turn metrics)
--- Constants kept in `buzz_core::kind`; inlined here because a sqlx migration
--- is frozen SQL and cannot import the Rust constant. If a new privacy-sensitive
--- kind is added there, add a new additive migration following this pattern and
--- add a regression test in `buzz-search/tests/fts_integration.rs`.
+-- Constants are kept in `packages/core/src/kinds.ts`; this frozen SQL cannot
+-- import runtime constants. If a new privacy-sensitive kind is added there,
+-- add an additive migration following this pattern and a search regression test.
 --
 -- NULL tsvector never matches `@@`, so excluded rows are storage-level
 -- unsearchable.

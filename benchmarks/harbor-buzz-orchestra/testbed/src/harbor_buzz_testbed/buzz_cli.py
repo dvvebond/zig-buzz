@@ -38,6 +38,9 @@ class BuzzCli:
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
+                # The exit code is turned into BuzzCliError below so the
+                # stderr/stdout tail can be reported with it.
+                check=False,
                 env={
                     "BUZZ_RELAY_URL": self._relay_url,
                     "BUZZ_PRIVATE_KEY": self._secret_key,
