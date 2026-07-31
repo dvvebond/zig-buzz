@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CommandRegistry } from "./commands.js";
+import { readRememberedPort, rememberPort } from "./server-port.js";
 import { AgentModelService } from "./agent-models.js";
 import { ArchiveService } from "./archive.js";
 import { BuilderlabService } from "./builderlab.js";
@@ -44,6 +45,13 @@ const dataDirectory =
 const distDirectory =
   process.env.BUZZ_DESKTOP_DIST?.trim() ||
   path.join(workspaceRoot, "desktop", "dist");
+const explicitPort = Number(process.env.BUZZ_DESKTOP_PORT?.trim() ?? "");
+const configuredPort =
+  Number.isInteger(explicitPort) &&
+  explicitPort >= 1_024 &&
+  explicitPort <= 65_535
+    ? explicitPort
+    : await readRememberedPort(dataDirectory);
 const relayUrl = process.env.BUZZ_RELAY_URL?.trim() || "ws://127.0.0.1:3000";
 const relayHttpUrl =
   process.env.BUZZ_RELAY_HTTP_URL?.trim() || relayUrl.replace(/^ws/, "http");
@@ -201,7 +209,14 @@ const server = await startDesktopServer({
   bootToken,
   commands,
   distDirectory,
+  // Prefer the port used last time so the browser origin — and with it the UI's
+  // per-origin state — survives a restart. BUZZ_DESKTOP_PORT overrides it.
+  ...(configuredPort !== undefined ? { port: configuredPort } : {}),
 });
+await rememberPort(
+  dataDirectory,
+  new URL(server.origin).port ? Number(new URL(server.origin).port) : 0,
+);
 const launchUrl = `${server.origin}/#buzz-token=${encodeURIComponent(bootToken)}`;
 reset.setRestartHandler(async () => {
   await close();

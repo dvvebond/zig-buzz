@@ -61,13 +61,26 @@ export async function startDesktopServer(input: {
     socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(input.port ?? 0, host, () => {
-      server.off("error", reject);
-      resolve();
+  // A requested port is a preference, not a requirement. Reusing the previous
+  // port keeps the browser origin stable across restarts, which is what the UI's
+  // per-origin storage depends on, but another process may have taken it while
+  // the host was down — falling back to an ephemeral port must not stop launch.
+  const listenOn = async (port: number): Promise<void> => {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, host, () => {
+        server.off("error", reject);
+        resolve();
+      });
     });
-  });
+  };
+  const preferred = input.port ?? 0;
+  try {
+    await listenOn(preferred);
+  } catch (error) {
+    if (preferred === 0) throw error;
+    await listenOn(0);
+  }
   const address = server.address();
   if (!address || typeof address === "string") {
     server.close();
